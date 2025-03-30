@@ -1,0 +1,6 @@
+// Test file with type annotation
+fn main() -> none {
+    // Variable declaration with type annotation
+    let message: str = "Hello, world!";
+    print(message);
+}

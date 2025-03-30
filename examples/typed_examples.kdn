@@ -1,0 +1,76 @@
+// filepath: /home/kaiden/RustroverProjects/KdnLang/examples/typed_examples.kdn
+// KdnLang Compiled Examples
+// Demonstrating strong typing and compilation features
+
+// Function with typed parameters and return value
+fn add(a: i32, b: i32) -> i32 {
+    return a + b;
+}
+
+// Function that may cause runtime errors
+fn divide(a: f64, b: f64) -> f64 {
+    if b == 0.0 {
+        // In a real implementation, this would throw a runtime error
+        return 0.0;
+    }
+    return a / b;
+}
+
+// Function with float parameters
+fn average(x: f64, y: f64) -> f64 {
+    return (x + y) / 2.0;
+}
+
+// Function for string manipulation
+fn greet(name: str) -> str {
+    return "Hello, " + name + "!";
+}
+
+// Main function - entry point
+fn main() -> none {
+    // Integer operations
+    let num1: i32 = 42;
+    let num2: i32 = 58;
+    let sum: i32 = add(num1, num2);
+    print("Sum: " + sum.to_string());
+    
+    // Floating point operations
+    let float1: f64 = 3.14;
+    let float2: f64 = 2.71;
+    let avg: f64 = average(float1, float2);
+    print("Average: " + avg.to_string());
+    
+    // String operations
+    let name: str = "KdnLang";
+    let greeting: str = greet(name);
+    print(greeting);
+    
+    // Boolean operations
+    let is_compiled: bool = true;
+    let is_interpreted: bool = false;
+    
+    if is_compiled && !is_interpreted {
+        print("KdnLang is a compiled language!");
+    }
+    
+    // Pattern matching with type enforcement
+    let value: i32 = 15;
+    
+    match value {
+        0 => print("Zero"),
+        1..=10 => print("Small number"),
+        11..=20 => print("Medium number"),
+        _ => print("Large number"),
+    }
+    
+    // Try-except for error handling
+    try {
+        let safe_division: f64 = divide(10.0, 2.0);
+        print("10 / 2 = " + safe_division.to_string());
+        
+        // This would throw an error at runtime
+        // let unsafe_division: f64 = divide(5.0, 0.0);
+    } except {
+        print("Division by zero caught!");
+    }
+}

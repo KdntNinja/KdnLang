@@ -1,0 +1,183 @@
+program = { SOI ~ (function | statement | struct | async_fn | try_except)* ~ EOI }
+
+// Function definition with required return type
+function = { 
+    "fn" ~ identifier ~ "(" ~ parameters? ~ ")" ~ "->" ~ type_declaration ~ 
+    "{" ~ statement* ~ "}" 
+}
+
+// Struct definition
+struct = { 
+    "struct" ~ identifier ~ "{" ~ struct_field* ~ "}" 
+}
+
+// Struct field with required type annotation
+struct_field = { 
+    identifier ~ ":" ~ type_declaration ~ ","? 
+}
+
+// Async function with required return type
+async_fn = { 
+    "async" ~ "fn" ~ identifier ~ "(" ~ parameters? ~ ")" ~ "->" ~ type_declaration ~ 
+    "{" ~ statement* ~ "}" 
+}
+
+// Try-except block
+try_except = { 
+    "try" ~ "{" ~ statement* ~ "}" ~ "except" ~ "{" ~ statement* ~ "}" 
+}
+
+// Statement types
+statement = { 
+    let_statement | 
+    print | 
+    return_statement | 
+    if_statement |
+    match_statement | 
+    expression_statement 
+}
+
+// Variable declaration with required type annotation
+let_statement = { 
+    "let" ~ identifier ~ ":" ~ type_declaration ~ "=" ~ expression ~ ";" 
+}
+
+// Print statement
+print = { 
+    "print" ~ "(" ~ expression ~ ")" ~ ";" 
+}
+
+// Return statement 
+return_statement = { 
+    "return" ~ expression ~ ";" 
+}
+
+// If statement with else clause
+if_statement = {
+    "if" ~ expression ~ "{" ~ statement* ~ "}" ~
+    ("else" ~ "{" ~ statement* ~ "}")? 
+}
+
+// Match statement
+match_statement = { 
+    "match" ~ expression ~ "{" ~ match_arm* ~ "}" 
+}
+
+// Match arm
+match_arm = { 
+    pattern ~ "=>" ~ (statement | "{" ~ statement* ~ "}") ~ ","? 
+}
+
+// Expression statement (e.g., function call)
+expression_statement = {
+    expression ~ ";"
+}
+
+// Pattern types for match expressions
+pattern = { 
+    range | 
+    literal_pattern | 
+    wildcard 
+}
+
+// Range pattern (1..=10)
+range = { 
+    number ~ "..=" ~ number 
+}
+
+// Literal pattern
+literal_pattern = {
+    number |
+    string |
+    boolean
+}
+
+// Wildcard pattern (_)
+wildcard = { "_" }
+
+// Boolean literals
+boolean = { "true" | "false" }
+
+// Expression with operators
+expression = { 
+    term ~ (operator ~ term)* 
+}
+
+// Terms in expressions
+term = { 
+    number | 
+    float |
+    string | 
+    boolean |
+    function_call |
+    identifier |
+    "(" ~ expression ~ ")"
+}
+
+// Function call
+function_call = { 
+    identifier ~ "(" ~ arguments? ~ ")" 
+}
+
+// Binary operators
+operator = { 
+    "+" | "-" | "*" | "/" | 
+    "==" | "!=" | "<" | "<=" | ">" | ">=" |
+    "&&" | "||"
+}
+
+// Function parameters with required type annotations
+parameters = { 
+    parameter ~ ("," ~ parameter)* 
+}
+
+// Parameter with type
+parameter = { 
+    identifier ~ ":" ~ type_declaration 
+}
+
+// Function arguments
+arguments = { 
+    expression ~ ("," ~ expression)* 
+}
+
+// Type declarations
+type_declaration = { 
+    "i32" | 
+    "f64" | 
+    "str" | 
+    "bool" |
+    "none" |
+    custom_type
+}
+
+// Custom type reference (e.g., for structs)
+custom_type = {
+    identifier
+}
+
+// Integer literal
+number = @{ 
+    "-"? ~ ASCII_DIGIT+ 
+}
+
+// Floating point literal
+float = @{
+    "-"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+
+}
+
+// String literal
+string = @{ 
+    "\"" ~ (!"\"" ~ ANY)* ~ "\"" 
+}
+
+// Identifier
+identifier = @{ 
+    (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* 
+}
+
+// Comments (ignored)
+COMMENT = _{ "//" ~ (!NEWLINE ~ ANY)* }
+
+// Whitespace (ignored)
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

@@ -4,10 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-logos = "0.15.0"
+logos = "0.15.0" # For lexing
+pest = "2.1" # For parsing
+pest_derive = "2.1" # For parsing
 lazy_static = "1.4" # For global constants
 regex = "1" # Regular expressions
 serde = { version = "1", features = ["derive"] } # Serialization
 serde_json = "1"
 async-std = { version = "1", features = ["attributes"] } # Async runtime
-
+miette = { version = "7.5.0", features = ["fancy"] } # Error handling with fancy diagnostics
+thiserror = "2.0.12" # For error definitions
