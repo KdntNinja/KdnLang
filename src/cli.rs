@@ -5,7 +5,8 @@ use std::path::Path;
 
 use crate::compiler::{Compiler, OptimizationLevel};
 use crate::lexer::tokenize;
-use crate::parser::{ASTNode, KdnParser};
+use crate::compiler::ast::ASTNode;
+use crate::parser::KdnParser;
 use crate::typechecker::TypeChecker;
 
 pub fn process_args(args: Vec<String>) -> Result<()> {
