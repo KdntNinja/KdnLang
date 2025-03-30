@@ -74,19 +74,7 @@ fn main() -> Result<()> {
                 compile_file(input_file, output_file, opt_level)?;
                 
                 // Run the compiled program
-                #[cfg(unix)]
-                {
-                    use std::process::Command;
-                    println!("Running {}...", output_file);
-                    let status = Command::new(output_file)
-                        .status()
-                        .into_diagnostic()
-                        .map_err(|err| err.context(format!("Failed to execute {}", output_file)))?;
-                    
-                    if !status.success() {
-                        eprintln!("Program exited with code: {}", status.code().unwrap_or(-1));
-                    }
-                }
+                run_compiled_binary(output_file)?;
             },
             "help" | "--help" | "-h" => {
                 print_usage(&args[0]);
@@ -177,4 +165,22 @@ fn compile_file(file_path: &str, output_path: &str, opt_level: OptimizationLevel
 fn check_debug_flag() -> bool {
     let args: Vec<String> = env::args().collect();
     args.iter().any(|arg| arg == "-d")
+}
+
+// Function to run the compiled binary
+fn run_compiled_binary(output_file: &str) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use std::process::Command;
+        println!("Running {}...", output_file);
+        let status = Command::new(output_file)
+            .status()
+            .into_diagnostic()
+            .map_err(|err| err.context(format!("Failed to execute {}", output_file)))?;
+        
+        if !status.success() {
+            eprintln!("Program exited with code: {}", status.code().unwrap_or(-1));
+        }
+    }
+    Ok(())
 }
