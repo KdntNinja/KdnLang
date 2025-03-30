@@ -42,11 +42,11 @@ impl Compiler {
         
         // Step 4: Write the machine code to the output file
         let path: &Path = Path::new(output_path);
-        let mut file: File = File::create(path).map_err(|e: std::io::Error| {
+        let mut file: File = File::create(path).map_err(|e: stdio::Error| {
             KdnError::SimpleError(format!("Failed to create output file: {}", e))
         })?;
         
-        file.write_all(&machine_code).map_err(|e: std::io::Error| {
+        file.write_all(&machine_code).map_err(|e: stdio::Error| {
             KdnError::SimpleError(format!("Failed to write to output file: {}", e))
         })?;
         
@@ -54,11 +54,11 @@ impl Compiler {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mut perms: std::fs::Permissions = std::fs::metadata(path).map_err(|e: std::io::Error| {
+            let mut perms: std::fs::Permissions = std::fs::metadata(path).map_err(|e: stdio::Error| {
                 KdnError::SimpleError(format!("Failed to get file metadata: {}", e))
             })?.permissions();
             perms.set_mode(0o755); // rwxr-xr-x
-            std::fs::set_permissions(path, perms).map_err(|e: std::io::Error| {
+            std::fs::set_permissions(path, perms).map_err(|e: stdio::Error| {
                 KdnError::SimpleError(format!("Failed to set file permissions: {}", e))
             })?;
         }
