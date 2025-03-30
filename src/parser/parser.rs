@@ -4,6 +4,7 @@ use crate::parser::DataType;
 use miette::NamedSource;
 use pest::Parser;
 use pest_derive::Parser;
+use miette::SourceSpan;
 
 #[derive(Parser)]
 #[grammar = "parser/grammar.pest"]
