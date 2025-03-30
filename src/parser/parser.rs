@@ -230,6 +230,156 @@ impl KdnParser {
                     });
                 }
 
+                Rule::if_statement => {
+                    // Parse if statement
+                    let mut inner = pair.into_inner();
+
+                    let condition = inner
+                        .next()
+                        .ok_or_else(|| KdnError::ParserError {
+                            src: NamedSource::new(file_path, source_code.to_string()),
+                            message: "Expected condition in if statement".to_string(),
+                            span: span(0, 10),
+                        })?;
+
+                    let condition_node = Self::build_ast(
+                        file_path,
+                        pest::iterators::Pairs::single(condition),
+                        source_code,
+                    )?;
+
+                    let mut then_block = Vec::new();
+                    let mut else_block = None;
+
+                    for stmt_pair in inner {
+                        if stmt_pair.as_rule() == Rule::statement {
+                            then_block.push(Self::build_ast(
+                                file_path,
+                                stmt_pair.into_inner(),
+                                source_code,
+                            )?);
+                        } else if stmt_pair.as_rule() == Rule::else_block {
+                            let mut else_stmts = Vec::new();
+                            for else_stmt_pair in stmt_pair.into_inner() {
+                                else_stmts.push(Self::build_ast(
+                                    file_path,
+                                    else_stmt_pair.into_inner(),
+                                    source_code,
+                                )?);
+                            }
+                            else_block = Some(else_stmts);
+                        }
+                    }
+
+                    ast_nodes.push(ASTNode::IfStatement {
+                        condition: Box::new(condition_node),
+                        then_block,
+                        else_block,
+                    });
+                }
+
+                Rule::match_statement => {
+                    // Parse match statement
+                    let mut inner = pair.into_inner();
+
+                    let expression = inner
+                        .next()
+                        .ok_or_else(|| KdnError::ParserError {
+                            src: NamedSource::new(file_path, source_code.to_string()),
+                            message: "Expected expression in match statement".to_string(),
+                            span: span(0, 10),
+                        })?;
+
+                    let expression_node = Self::build_ast(
+                        file_path,
+                        pest::iterators::Pairs::single(expression),
+                        source_code,
+                    )?;
+
+                    let mut arms = Vec::new();
+
+                    for arm_pair in inner {
+                        let mut arm_inner = arm_pair.into_inner();
+
+                        let pattern = arm_inner
+                            .next()
+                            .ok_or_else(|| KdnError::ParserError {
+                                src: NamedSource::new(file_path, source_code.to_string()),
+                                message: "Expected pattern in match arm".to_string(),
+                                span: span(0, 10),
+                            })?;
+
+                        let pattern_node = match pattern.as_rule() {
+                            Rule::range => {
+                                let mut range_inner = pattern.into_inner();
+                                let start = range_inner
+                                    .next()
+                                    .ok_or_else(|| KdnError::ParserError {
+                                        src: NamedSource::new(file_path, source_code.to_string()),
+                                        message: "Expected start of range".to_string(),
+                                        span: span(0, 10),
+                                    })?
+                                    .as_str()
+                                    .parse()
+                                    .map_err(|_| KdnError::ParserError {
+                                        src: NamedSource::new(file_path, source_code.to_string()),
+                                        message: "Failed to parse start of range".to_string(),
+                                        span: span(0, 10),
+                                    })?;
+
+                                let end = range_inner
+                                    .next()
+                                    .ok_or_else(|| KdnError::ParserError {
+                                        src: NamedSource::new(file_path, source_code.to_string()),
+                                        message: "Expected end of range".to_string(),
+                                        span: span(0, 10),
+                                    })?
+                                    .as_str()
+                                    .parse()
+                                    .map_err(|_| KdnError::ParserError {
+                                        src: NamedSource::new(file_path, source_code.to_string()),
+                                        message: "Failed to parse end of range".to_string(),
+                                        span: span(0, 10),
+                                    })?;
+
+                                MatchPattern::Range(start, end)
+                            }
+                            Rule::literal_pattern => {
+                                let literal_node = Self::build_ast(
+                                    file_path,
+                                    pest::iterators::Pairs::single(pattern),
+                                    source_code,
+                                )?;
+                                MatchPattern::Literal(literal_node)
+                            }
+                            Rule::wildcard => MatchPattern::Wildcard,
+                            _ => {
+                                return Err(KdnError::ParserError {
+                                    src: NamedSource::new(file_path, source_code.to_string()),
+                                    message: "Unexpected pattern in match arm".to_string(),
+                                    span: span(0, 10),
+                                });
+                            }
+                        };
+
+                        let mut statements = Vec::new();
+                        for stmt_pair in arm_inner {
+                            statements.push(Self::build_ast(
+                                file_path,
+                                stmt_pair.into_inner(),
+                                source_code,
+                            )?);
+                        }
+
+                        arms.push((pattern_node, statements));
+                    }
+
+                    ast_nodes.push(ASTNode::MatchStatement {
+                        expression: Box::new(expression_node),
+                        arms,
+                    });
+                }
+
                 Rule::number => {
                     // Parse numeric literal
                     let num_str = pair.as_str();
