@@ -1,4 +1,0 @@
-// A simple test for debugging
-fn main() -> none {
-    print("Hello, world!");
-}
