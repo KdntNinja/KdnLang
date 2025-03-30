@@ -1,8 +1,5 @@
-use super::types::DataType;
-
 /// Abstract Syntax Tree node types representing program structure
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub enum ASTNode {
     /// Function definition with name, parameters, return type, and body statements
     Function {
@@ -101,7 +98,6 @@ pub enum ASTNode {
 
 /// Match pattern for match statements
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub enum MatchPattern {
     /// Range pattern (inclusive)
     Range(i32, i32),

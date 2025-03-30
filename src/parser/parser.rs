@@ -1,5 +1,6 @@
 use crate::errors::{span, KdnError, KdnResult};
-use crate::parser::{ASTNode, DataType};
+use crate::compiler::ast::{ASTNode, MatchPattern};
+use crate::parser::DataType;
 use miette::NamedSource;
 use pest::Parser;
 use pest_derive::Parser;
