@@ -1,28 +1,34 @@
-use miette::{IntoDiagnostic, Result};
-use std::env;
-mod cli;
-mod compiler;
+use clap::Parser;
+use miette::Result;
+use std::fs;
+use crate::lexer::Token;
+
 mod errors;
 mod lexer;
-mod parser;
-mod typechecker;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Path to the .kdn file to load
+    #[arg(short, long)]
+    file: String,
+}
 
 fn main() -> Result<()> {
-    miette::set_hook(Box::new(|_| {
-        Box::new(
-            miette::MietteHandlerOpts::new()
-                .context_lines(4)
-                .tab_width(2)
-                .build(),
-        )
-    }))?;
+    // Parse command-line arguments
+    let args: Cli = Cli::parse();
 
-    let args: Vec<String> = env::args().collect();
+    // Load code from the specified .kdn file
+    let code: String = fs::read_to_string(&args.file)
+        .map_err(|e: std::io::Error| miette::miette!("Failed to read {}: {}", args.file, e))?;
 
-    if args.len() < 2 {
-        cli::print_usage(&args[0]);
-        return Ok(());
+    // Pass the code to the lexer
+    let tokens: Vec<(Token, String)> = lexer::tokenize(&code)?;
+
+    // Print tokens for now
+    for token in tokens.iter() {
+        println!("{:?}", token);
     }
 
-    cli::process_args(args)
+    Ok(())
 }
