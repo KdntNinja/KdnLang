@@ -1,1 +1,5 @@
-2 + 2
+let name: str = input("Enter your name: ");
+print("Hello, " + name + "!");
+
+let age: i32 = input("Enter your age: ").parse();
+print("You are " + str(age) + " years old.");

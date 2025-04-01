@@ -9,4 +9,4 @@ pest = "2.1" # For parsing
 pest_derive = "2.1" # For parsing
 miette = { version = "7.5.0", features = ["fancy"] } # Error handling with fancy diagnostics
 thiserror = "2.0.12" # For error definitions
-clap = { version = "4.5.35", features = ["derive"] }
+clap = { version = "4.5.35", features = ["derive"] } # For cmd interface

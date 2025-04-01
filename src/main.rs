@@ -1,34 +1,31 @@
+use crate::lexer::TokenWithSpan;
+use crate::parser::{ASTNode, ParseError};
 use clap::Parser;
 use miette::Result;
 use std::fs;
-use crate::lexer::Token;
 
-mod errors;
+mod error_handling;
 mod lexer;
+mod parser;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    /// Path to the .kdn file to load
     #[arg(short, long)]
     file: String,
 }
 
-fn main() -> Result<()> {
-    // Parse command-line arguments
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Cli = Cli::parse();
 
-    // Load code from the specified .kdn file
     let code: String = fs::read_to_string(&args.file)
         .map_err(|e: std::io::Error| miette::miette!("Failed to read {}: {}", args.file, e))?;
 
-    // Pass the code to the lexer
-    let tokens: Vec<(Token, String)> = lexer::tokenize(&code)?;
+    let tokens: Vec<TokenWithSpan> = lexer::tokenize(&code)?;
 
-    // Print tokens for now
-    for token in tokens.iter() {
-        println!("{:?}", token);
-    }
+    let ast: ASTNode = parser::parse_program(&tokens)
+        .map_err(|e: ParseError| miette::miette!("Parser error: {}", e))?;
+    println!("AST: {:#?}", ast);
 
     Ok(())
 }

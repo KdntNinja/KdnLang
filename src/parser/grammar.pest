@@ -1,0 +1,37 @@
+// Define basic building blocks
+digit = _{ '0'..'9' }
+letter = _{ 'a'..'z' | 'A'..'Z' }
+identifier = @{ letter ~ (letter | digit | "_")* }
+number = @{ digit+ }
+string_literal = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "'" ~ (!"'" ~ ANY)* ~ "'" }
+
+// Define operators and punctuation
+operator = { "+" | "-" | "*" | "/" }
+punctuation = { "=" | ";" }
+
+// Define type_keyword rule
+type_keyword = { "str" | "i32" | "f64" }
+
+// Define expressions and statements
+expression = { number ~ operator ~ number | string_literal | identifier }
+
+// Update assignment rule to include 'let' keyword and semicolon
+assignment = { "let" ~ identifier ~ ":" ~ type_keyword ~ "=" ~ string_literal ~ ";" }
+
+// Define function rule
+function = { "fn" ~ identifier ~ "(" ~ (identifier ~ ":" ~ type_keyword ~ ("," ~ identifier ~ ":" ~ type_keyword)*)? ~ ")" ~ "{" ~ statement* ~ "}" }
+
+// Define match statement rule
+match_statement = { "match" ~ expression ~ "{" ~ (expression ~ "=>" ~ statement ~ ",")* ~ "_" ~ "=>" ~ statement ~ "}" }
+
+// Define try-except rule
+try_except = { "try" ~ "{" ~ statement* ~ "}" ~ "except" ~ "{" ~ statement* ~ "}" }
+
+// Update statement rule to include new constructs
+statement = { assignment | expression ~ ";" | function | match_statement | try_except }
+
+// Define top-level constructs
+program = { SOI ~ assignment* ~ EOI }
+
+// Skip whitespace
+WHITESPACE = _{ " " | "\t" | "\n" }

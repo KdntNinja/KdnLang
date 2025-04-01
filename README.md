@@ -4,7 +4,7 @@
 
 KdnLang is a modern programming language that combines **Rust's static typing** and **performance** with **Python's simplicity** and **ease of use**. It features:
 
-- 🦀 **Rust-style strong typing** (`i32`, `f64`, `String`, etc.)
+- 🦀 **Rust-style strong typing** (`i32`, `f64`, `str`, etc.)
 - 🐍 **Python-like user interaction** (`print()`, `input()`)
 - 🛠️ **Garbage collection** (no manual memory management)
 - 🏗️ **Pattern matching** (`match` like Rust)
@@ -24,7 +24,7 @@ print("Hello, world!");
 ### 2️⃣ Variables & User Input
 
 ```kdn
-let name: String = input("Enter your name: ");
+let name: str = input("Enter your name: ");
 print("Hello, " + name + "!");
 
 let age: i32 = input("Enter your age: ").parse();
@@ -34,7 +34,7 @@ print("You are " + str(age) + " years old.");
 ### 3️⃣ Functions & Control Flow
 
 ```kdn
-fn greet(name: String) -> String {
+fn greet(name: str) -> str {
     return "Hello, " + name + "!";
 }
 
@@ -64,26 +64,12 @@ try {
 }
 ```
 
-### 6️⃣ Structs & Methods (Rust-style OOP)
+### 6️⃣ For loops (Rust-style)
 
 ```kdn
-struct Person {
-    name: String,
-    age: i32,
+for i in 0..11 {
+   print(i);
 }
-
-impl Person {
-    fn new(name: String, age: i32) -> Person {
-        return Person { name, age };
-    }
-
-    fn greet(self) {
-        print("Hello, my name is " + self.name);
-    }
-}
-
-let user: Person = Person::new(input("Enter name: "), input("Enter age: ").parse());
-user.greet();
 ```
 
 ### 7️⃣ Async/Await (Rust-Style)
@@ -106,7 +92,7 @@ print(result);
 1. Lexer: Converts source code into tokens.
 2. Parser: Builds an Abstract Syntax Tree (AST).
 3. Type Checker: Ensures Rust-like static typing.
-4. Interpreter/Compiler: Executes the AST or compiles it into machine code.
+4. Interpreter: Executes the AST.
 
 ---
 
@@ -178,7 +164,6 @@ KdnLang/
 
 #### Phase 2: Performance & Tooling
 
-- [ ] Bytecode Compilation
 - [ ] REPL for Interactive Coding
 - [ ] Debugging & Error Messages
 - [ ] IDE & LSP Support
