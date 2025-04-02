@@ -8,17 +8,20 @@ use pest::Parser;
 #[allow(dead_code)]
 pub fn parse_expression(input: &str) -> Result<ASTNode, ParseError> {
     let input_owned: String = input.to_string();
-    let pairs: Pairs<Rule> = KdnLangParser::parse(Rule::expression, &input_owned).map_err(
-        |e: pest::error::Error<Rule>| ParseError {
+    let pairs: Pairs<Rule> =
+        KdnLangParser::parse(Rule::expression, &input_owned).map_err(|e| ParseError {
             src: NamedSource::new("input.kdn", input_owned.clone()),
             span: convert_location_to_span(e.location),
-        },
-    )?;
+        })?;
 
     let mut ast_nodes: Vec<ASTNode> = Vec::new();
 
     for pair in pairs {
         match pair.as_rule() {
+            Rule::string_literal => {
+                let lexeme = pair.as_str();
+                ast_nodes.push(ASTNode::StringLiteral(lexeme.to_string()));
+            }
             Rule::number => {
                 ast_nodes.push(ASTNode::Number(pair.as_str().to_string()));
             }
@@ -28,8 +31,13 @@ pub fn parse_expression(input: &str) -> Result<ASTNode, ParseError> {
             Rule::identifier => {
                 ast_nodes.push(ASTNode::Identifier(pair.as_str().to_string()));
             }
-            Rule::string_literal => {
-                ast_nodes.push(ASTNode::StringLiteral(pair.as_str().to_string()));
+            Rule::function_call => {
+                let mut inner_pairs = pair.into_inner();
+                let name = inner_pairs.next().unwrap().as_str().to_string();
+                let args: Vec<ASTNode> = inner_pairs
+                    .map(|arg| parse_expression(arg.as_str()).unwrap())
+                    .collect();
+                ast_nodes.push(ASTNode::FunctionCall { name, args });
             }
             _ => {}
         }

@@ -1,30 +1,27 @@
 use crate::parser::ASTNode;
-use std::io::{self, Write};
+use std::io::{self, Stdout, StdoutLock, Write};
 
 pub fn print_fn(args: Vec<ASTNode>) -> ASTNode {
-    // Example usage documentation:
-    // print("Hello, world!");  // Note the semicolon is required
+    let stdout: Stdout = io::stdout();
+    let mut handle: StdoutLock = stdout.lock();
 
-    // Convert arguments to strings and print them
-    for arg in args {
-        match arg {
-            ASTNode::StringLiteral(s) => {
-                // Remove quotes from string literals
-                let cleaned_string: &str = s.trim_matches(|c: char| c == '\'' || c == '"');
-                print!("{}", cleaned_string);
-            }
-            ASTNode::Number(n) => {
-                print!("{}", n);
-            }
-            ASTNode::Identifier(id) => {
-                print!("{}", id);
-            }
-            _ => print!("{:?}", arg),
-        }
+    if args.is_empty() {
+        return ASTNode::Void;
     }
-    println!(); // Add newline at the end
-    io::stdout().flush().unwrap();
 
-    // Return empty/void result
+    let output: String = args
+        .iter()
+        .map(|arg| match arg {
+            ASTNode::StringLiteral(s) => s.trim_matches(|c: char| c == '\'' || c == '"').to_string(),
+            ASTNode::Number(n) => n.to_string(),
+            ASTNode::Identifier(id) => id.clone(),
+            _ => format!("{:?}", arg),
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    write!(handle, "{}", output).unwrap();
+    handle.flush().unwrap();
+
     ASTNode::Void
 }

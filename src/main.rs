@@ -11,8 +11,8 @@ mod stdlib;
 
 #[derive(Parser)]
 #[command(
-    author,
-    version,
+    author = "KdntNinja",
+    version = "0.0.1",
     about = "KdnLang - A Statically-Typed, Pythonic Language with Rust-Like Syntax"
 )]
 struct Cli {

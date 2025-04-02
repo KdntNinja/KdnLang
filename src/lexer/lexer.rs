@@ -1,21 +1,22 @@
 use crate::error_handling::errors::LexingError;
-use logos::{Lexer, Logos};
+use crate::lexer::tokens::{Token, TokenWithSpan};
+use logos::Logos;
 use miette::Result;
 use std::ops::Range;
 
-use super::tokens::{Token, TokenWithSpan};
-
 pub fn tokenize<'a>(code: &'a str, filename: &str) -> Result<Vec<TokenWithSpan<'a>>, LexingError> {
-    let mut lexer: Lexer<'a, Token> = Token::lexer(code);
+    let mut lexer: logos::Lexer<'a, Token> = Token::lexer(code);
     let mut tokens: Vec<TokenWithSpan<'a>> = Vec::new();
 
     while let Some(result) = lexer.next() {
         match result {
             Ok(token) => {
                 let span: Range<usize> = lexer.span();
+                let lexeme: &'a str = &code[span.start..span.end];
+
                 let token_with_span: TokenWithSpan<'a> = TokenWithSpan {
                     token,
-                    lexeme: &code[span.start..span.end],
+                    lexeme,
                     span: span.start..span.end,
                 };
                 tokens.push(token_with_span);

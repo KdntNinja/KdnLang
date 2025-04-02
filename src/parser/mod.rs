@@ -2,6 +2,9 @@ mod ast;
 mod expression_parser;
 mod parser_impl;
 
-pub use crate::error_handling::errors::ParseErrorWithDetails;
 pub use ast::ASTNode;
-pub use parser_impl::{parse_program, ParseError};
+pub use parser_impl::parse_program;
+
+pub mod call_parser;
+pub mod function_parser;
+pub mod variable_parser;

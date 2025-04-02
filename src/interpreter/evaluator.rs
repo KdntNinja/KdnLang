@@ -1,8 +1,8 @@
 use crate::error_handling::errors::RuntimeError;
 use crate::interpreter::{Environment, Value};
 use crate::parser::ASTNode;
-use crate::stdlib; // Add missing import
 use miette::SourceSpan;
+use std::io::{self, Write};
 
 #[derive(Debug, Clone)]
 pub struct EvalContext {
@@ -58,7 +58,6 @@ pub fn evaluate(
             })
         }
         ASTNode::StringLiteral(s) => {
-            // Remove quotes from string literals
             let content: String = s.trim_matches(|c: char| c == '\'' || c == '"').to_string();
             Ok(Value::String(content))
         }
@@ -83,57 +82,95 @@ pub fn evaluate(
             env.define(variable.clone(), eval_value);
             Ok(Value::Null)
         }
+        ASTNode::Function { name, body } => {
+            // Wrap the body in a Box<ASTNode> and store the function in the environment
+            env.define(
+                name.clone(),
+                Value::Function(vec![], Box::new(ASTNode::Block(body.clone()))),
+            );
+            Ok(Value::Null)
+        }
         ASTNode::FunctionCall { name, args } => {
-            // Check if it's a built-in function
-            let builtin_function: Option<stdlib::BuiltinFunction> = env.get_builtin_function(name);
+            if name == "input" {
+                let evaluated_args: Vec<Value> = args
+                    .iter()
+                    .map(|arg| evaluate(arg, env, ctx).unwrap_or(Value::Null))
+                    .collect();
 
-            if let Some(builtin) = builtin_function {
+                if let Some(Value::String(prompt)) = evaluated_args.get(0) {
+                    print!("{}", prompt);
+                }
+                io::stdout().flush().unwrap();
+
+                let mut input = String::new();
+                io::stdin().read_line(&mut input).unwrap();
+                let trimmed_input = input.trim_end().to_string();
+                return Ok(Value::String(trimmed_input));
+            }
+
+            if name == "print" {
+                let evaluated_args: Result<Vec<String>, RuntimeError> = args
+                    .iter()
+                    .map(|arg| {
+                        evaluate(arg, env, ctx).map(|val| match val {
+                            Value::String(s) => s,
+                            Value::Number(n) => n.to_string(),
+                            _ => format!("{:?}", val),
+                        })
+                    })
+                    .collect();
+
+                match evaluated_args {
+                    Ok(args_strs) => {
+                        println!("{}", args_strs.join(" "));
+                        Ok(Value::Null)
+                    }
+                    Err(e) => Err(e),
+                }
+            } else if let Some(builtin) = env.get_builtin_function(name) {
                 let ast_args: Vec<ASTNode> = args.clone();
                 let result: ASTNode = builtin(ast_args);
                 match result {
                     ASTNode::Void => Ok(Value::Null),
                     ASTNode::StringLiteral(s) => {
-                        // Remove quotes from string literals
                         let content: String =
                             s.trim_matches(|c: char| c == '\'' || c == '"').to_string();
                         Ok(Value::String(content))
                     }
-                    _ => {
-                        let error: RuntimeError = RuntimeError::new(
-                            ctx.source_code.clone(),
-                            &ctx.filename,
-                            ctx.span(),
-                            format!("Unexpected return from built-in function: {:?}", result),
-                            Some(format!(
-                                "The function '{}' returned an unexpected value type.",
-                                name
-                            )),
-                        );
-                        Err(error)
-                    }
+                    _ => Err(RuntimeError::new(
+                        ctx.source_code.clone(),
+                        &ctx.filename,
+                        ctx.span(),
+                        format!("Unexpected return from built-in function: {:?}", result),
+                        Some(format!(
+                            "The function '{}' returned an unexpected value type.",
+                            name
+                        )),
+                    )),
                 }
+            } else if let Some(Value::Function(_, body)) = env.get(name) {
+                // Execute the user-defined function
+                evaluate(&body, env, ctx)?;
+                Ok(Value::Null)
             } else {
-                // User-defined functions would be handled here
-                let error: RuntimeError = RuntimeError::new(
+                Err(RuntimeError::new(
                     ctx.source_code.clone(),
                     &ctx.filename,
                     ctx.span(),
                     format!("Undefined function: {}", name),
-                    Some(format!("The function '{}' is not defined. Check for typos or make sure it's imported.", name)),
-                );
-                Err(error)
+                    Some(format!(
+                        "The function '{}' is not defined. Check for typos or make sure it's imported.",
+                        name
+                    )),
+                ))
             }
         }
-        // Other node types would be implemented here
-        _ => {
-            let error: RuntimeError = RuntimeError::new(
-                ctx.source_code.clone(),
-                &ctx.filename,
-                ctx.span(),
-                format!("Unimplemented node type: {:?}", node),
-                Some("This language feature is not yet implemented.".to_string()),
-            );
-            Err(error)
-        }
+        _ => Err(RuntimeError::new(
+            ctx.source_code.clone(),
+            &ctx.filename,
+            ctx.span(),
+            format!("Unimplemented node type: {:?}", node),
+            Some("This language feature is not yet implemented.".to_string()),
+        )),
     }
 }

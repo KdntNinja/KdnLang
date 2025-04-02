@@ -18,7 +18,7 @@ pub enum Token {
     // Literals
     #[regex(r"[0-9]+")]
     Number,
-    #[regex(r#"[\"'][^\"']*[\"']"#, priority = 2)]
+    #[regex(r#"[\"']([^\"'\\]|\\.)*[\"']"#, priority = 2)]
     StringLiteral,
 
     // Operators
