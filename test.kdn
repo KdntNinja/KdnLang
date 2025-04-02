@@ -1,6 +1,6 @@
 let name: str = input("Enter your name: ");
 
-if name == "kaiden" {
+if (name == "kaiden") {
     print(name);
 } else {
     print("Bye");
