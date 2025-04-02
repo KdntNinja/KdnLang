@@ -5,15 +5,15 @@ use std::ops::Range;
 
 use super::tokens::{Token, TokenWithSpan};
 
-pub fn tokenize(code: &str) -> Result<Vec<TokenWithSpan<'_>>, LexingError> {
-    let mut lexer: Lexer<Token> = Token::lexer(code);
-    let mut tokens: Vec<TokenWithSpan> = Vec::new();
+pub fn tokenize<'a>(code: &'a str, filename: &str) -> Result<Vec<TokenWithSpan<'a>>, LexingError> {
+    let mut lexer: Lexer<'a, Token> = Token::lexer(code);
+    let mut tokens: Vec<TokenWithSpan<'a>> = Vec::new();
 
     while let Some(result) = lexer.next() {
         match result {
             Ok(token) => {
                 let span: Range<usize> = lexer.span();
-                let token_with_span: TokenWithSpan = TokenWithSpan {
+                let token_with_span: TokenWithSpan<'a> = TokenWithSpan {
                     token,
                     lexeme: &code[span.start..span.end],
                     span: span.start..span.end,
@@ -22,7 +22,14 @@ pub fn tokenize(code: &str) -> Result<Vec<TokenWithSpan<'_>>, LexingError> {
             }
             Err(_) => {
                 let span: Range<usize> = lexer.span();
-                return Err(LexingError::new(code.to_string(), span, None, None));
+                let unexpected_token: &str = &code[span.clone()];
+                let message: String = format!("Unexpected token: '{}'", unexpected_token);
+                return Err(LexingError::new(
+                    code.to_string(),
+                    filename,
+                    span,
+                    Some(message),
+                ));
             }
         }
     }

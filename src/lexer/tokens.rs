@@ -25,8 +25,15 @@ pub enum Token {
     #[regex(r"[+\-*/%]")]
     Operator,
 
-    // Punctuation
-    #[regex(r"[=;,.]")]
+    // Match arrow operator
+    #[token("=>")]
+    MatchArrow,
+
+    // Punctuation with clear distinction for semicolons
+    #[token(";")]
+    Semicolon,
+
+    #[regex(r"[=,.]")]
     Punctuation,
 
     // Brackets

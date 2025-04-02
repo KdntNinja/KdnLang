@@ -1,31 +1,50 @@
-use crate::lexer::TokenWithSpan;
-use crate::parser::{ASTNode, ParseError};
 use clap::Parser;
-use miette::Result;
+use miette::{IntoDiagnostic, Result};
 use std::fs;
+use std::path::Path;
 
 mod error_handling;
+mod interpreter;
 mod lexer;
 mod parser;
+mod stdlib;
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    author,
+    version,
+    about = "KdnLang - A Statically-Typed, Pythonic Language with Rust-Like Syntax"
+)]
 struct Cli {
-    #[arg(short, long)]
+    #[arg(short, long, help = "Path to the KdnLang source file to execute")]
     file: String,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let args: Cli = Cli::parse();
+    let source_file: &str = &args.file;
 
-    let code: String = fs::read_to_string(&args.file)
-        .map_err(|e: std::io::Error| miette::miette!("Failed to read {}: {}", args.file, e))?;
+    // Get the actual filename (not the full path) for error reporting
+    let filename: &str = Path::new(source_file)
+        .file_name()
+        .and_then(|name: &std::ffi::OsStr| name.to_str())
+        .unwrap_or(source_file);
 
-    let tokens: Vec<TokenWithSpan> = lexer::tokenize(&code)?;
+    // Read the source file
+    let code: String = fs::read_to_string(source_file)
+        .into_diagnostic()
+        .map_err(|_| miette::miette!("Failed to read {}", source_file))?;
 
-    let ast: ASTNode = parser::parse_program(&tokens)
-        .map_err(|e: ParseError| miette::miette!("Parser error: {}", e))?;
-    println!("AST: {:#?}", ast);
+    // Lexical analysis
+    let tokens: Vec<lexer::tokens::TokenWithSpan> = lexer::tokenize(&code, filename)?;
+
+    // Parsing
+    let ast: parser::ASTNode = parser::parse_program(&tokens, filename)?;
+
+    // Execution
+    let mut interpreter: interpreter::Interpreter =
+        interpreter::Interpreter::with_source(&code, filename);
+    let _result: interpreter::Value = interpreter.interpret(&ast)?;
 
     Ok(())
 }

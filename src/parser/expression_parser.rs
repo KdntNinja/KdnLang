@@ -1,15 +1,16 @@
 use crate::parser::ast::ASTNode;
 use crate::parser::parser_impl::Rule;
 use crate::parser::parser_impl::{convert_location_to_span, KdnLangParser, ParseError};
-use miette::Result;
+use miette::{NamedSource, Result};
 use pest::iterators::Pairs;
 use pest::Parser;
 
+#[allow(dead_code)]
 pub fn parse_expression(input: &str) -> Result<ASTNode, ParseError> {
     let input_owned: String = input.to_string();
     let pairs: Pairs<Rule> = KdnLangParser::parse(Rule::expression, &input_owned).map_err(
         |e: pest::error::Error<Rule>| ParseError {
-            src: input_owned.clone(),
+            src: NamedSource::new("input.kdn", input_owned.clone()),
             span: convert_location_to_span(e.location),
         },
     )?;
@@ -41,11 +42,12 @@ pub fn parse_expression(input: &str) -> Result<ASTNode, ParseError> {
     }
 }
 
+#[allow(dead_code)]
 pub fn parse_function(input: &str) -> Result<ASTNode, ParseError> {
     let pairs: Pairs<Rule> =
         KdnLangParser::parse(Rule::function, input).map_err(|e: pest::error::Error<Rule>| {
             ParseError {
-                src: input.to_string(),
+                src: NamedSource::new("input.kdn", input.to_string()),
                 span: convert_location_to_span(e.location),
             }
         })?;
@@ -59,10 +61,11 @@ pub fn parse_function(input: &str) -> Result<ASTNode, ParseError> {
     Ok(ASTNode::Function { name, body })
 }
 
+#[allow(dead_code)]
 pub fn parse_match(input: &str) -> Result<ASTNode, ParseError> {
     let pairs: Pairs<Rule> = KdnLangParser::parse(Rule::match_statement, input).map_err(
         |e: pest::error::Error<Rule>| ParseError {
-            src: input.to_string(),
+            src: NamedSource::new("input.kdn", input.to_string()),
             span: convert_location_to_span(e.location),
         },
     )?;
@@ -82,11 +85,12 @@ pub fn parse_match(input: &str) -> Result<ASTNode, ParseError> {
     Ok(ASTNode::Match { expression, arms })
 }
 
+#[allow(dead_code)]
 pub fn parse_try_except(input: &str) -> Result<ASTNode, ParseError> {
     let pairs: Pairs<Rule> =
         KdnLangParser::parse(Rule::try_except, input).map_err(|e: pest::error::Error<Rule>| {
             ParseError {
-                src: input.to_string(),
+                src: NamedSource::new("input.kdn", input.to_string()),
                 span: convert_location_to_span(e.location),
             }
         })?;

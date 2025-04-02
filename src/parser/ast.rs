@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::string::String;
 use std::vec::Vec;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub enum ASTNode {
     Number(String),
@@ -28,4 +28,9 @@ pub enum ASTNode {
     },
     StringLiteral(String),
     Block(Vec<ASTNode>),
+    FunctionCall {
+        name: String,
+        args: Vec<ASTNode>,
+    },
+    Void,
 }

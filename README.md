@@ -124,7 +124,7 @@ print(result);
 Run a KdnLang script:
 
 ```sh
-kdnlang run script.kdn
+kdnlang --file script.kdn
 ```
 
 ---
