@@ -1,13 +1,15 @@
+use crate::error_handling::errors::KdnLangError;
 use crate::lexer::tokens::TokenWithSpan;
 use crate::lexer::Token;
 use crate::parser::ast::ASTNode;
-use crate::parser::call_parser::{parse_function_call, parse_print};
+use crate::parser::call_parser::{parse_function_call, parse_print, parse_python_print};
 use crate::parser::conditional_parser::parse_if_statement;
 use crate::parser::function_parser::parse_function;
 use crate::parser::variable_parser::parse_variable;
 use miette::Result;
 use pest::error::InputLocation;
-use pest_derive::Parser; // Use pest_derive for the Parser derive macro
+use pest_derive::Parser;
+// Use pest_derive for the Parser derive macro
 
 #[derive(Parser)]
 #[grammar = "parser/grammar.pest"]
@@ -73,8 +75,27 @@ pub fn parse_program(
                 token_iter.next();
             }
             Token::Identifier if token.lexeme == "print" => {
-                token_iter.next();
-                parse_print(&mut token_iter, &mut scope_stack)?;
+                token_iter.next(); // Consume the print token
+
+                // Check if the next token is a left parenthesis for traditional print
+                if let Some(next_token) = token_iter.peek() {
+                    if next_token.token == Token::LeftParen {
+                        parse_print(&mut token_iter, &mut scope_stack)?;
+                    } else {
+                        // No parenthesis, use the Python-style print
+                        parse_python_print(&mut token_iter, &mut scope_stack)?;
+                    }
+                } else {
+                    // End of input after print keyword
+                    return Err(KdnLangError::parser_error(
+                        src_content.clone(),
+                        filename,
+                        (0, 0),
+                        "Unexpected end of input after print",
+                        "Print statement requires an expression or arguments.",
+                    )
+                    .into());
+                }
             }
             Token::Identifier => {
                 // First check if it's a function call, otherwise handle as an identifier

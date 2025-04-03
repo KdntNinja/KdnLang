@@ -14,10 +14,12 @@ pub fn parse_variable(
         if var_name_token.token == Token::Identifier {
             // Parse type annotation
             let mut type_annotation = "any".to_string(); // Default type
+            let mut type_span = None; // Store the span for the type annotation
 
             if let Some(type_token) = token_iter.peek() {
                 // Check if token is a colon followed by a type name
                 if type_token.token == Token::Colon {
+                    let colon_span = type_token.span.clone();
                     token_iter.next(); // Consume the colon
                     if let Some(actual_type_token) = token_iter.next() {
                         if actual_type_token.token == Token::Identifier {
@@ -28,6 +30,11 @@ pub fn parse_variable(
                                 }
                                 _ => actual_type_token.lexeme.to_string(), // Custom type or identifier
                             };
+                            // Save the span from the colon to the end of the type
+                            type_span = Some((
+                                colon_span.start,
+                                actual_type_token.span.end - colon_span.start,
+                            ));
                         }
                     }
                 }
@@ -144,6 +151,7 @@ pub fn parse_variable(
                         variable: var_name_token.lexeme.to_string(),
                         type_annotation,
                         value: Box::new(value),
+                        type_span, // Include the span of the type annotation
                     };
 
                     // Add to current scope

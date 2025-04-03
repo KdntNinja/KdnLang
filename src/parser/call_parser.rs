@@ -223,3 +223,91 @@ pub fn parse_print(
     )
     .into())
 }
+
+pub fn parse_python_print(
+    token_iter: &mut std::iter::Peekable<std::slice::Iter<'_, TokenWithSpan<'_>>>,
+    scope_stack: &mut Vec<Vec<ASTNode>>,
+) -> Result<(), miette::Error> {
+    let mut args = Vec::new();
+
+    // Parse the expression to be printed
+    if let Some(arg) = token_iter.peek() {
+        match arg.token {
+            Token::StringLiteral => {
+                args.push(ASTNode::StringLiteral(arg.lexeme.to_string()));
+                token_iter.next(); // Consume the string literal
+            }
+            Token::Identifier => {
+                args.push(ASTNode::Identifier(arg.lexeme.to_string()));
+                token_iter.next(); // Consume the identifier
+            }
+            Token::Number => {
+                args.push(ASTNode::Number(arg.lexeme.to_string()));
+                token_iter.next(); // Consume the number
+            }
+            Token::BoolLiteral => {
+                let bool_value = arg.lexeme == "true";
+                args.push(ASTNode::BooleanLiteral(bool_value));
+                token_iter.next(); // Consume the boolean
+            }
+            _ => {
+                return Err(KdnLangError::parser_error(
+                    "".to_string(),
+                    "unknown",
+                    (0, 0),
+                    "Expected expression after print",
+                    "Python-style print statement should be in the format: print expr;",
+                )
+                .into());
+            }
+        }
+    } else {
+        return Err(KdnLangError::parser_error(
+            "".to_string(),
+            "unknown",
+            (0, 0),
+            "Unexpected end of input after print",
+            "Python-style print statement should be in the format: print expr;",
+        )
+        .into());
+    }
+
+    // Create print node
+    let print_node = ASTNode::FunctionCall {
+        name: "print".to_string(),
+        args,
+    };
+
+    if let Some(scope) = scope_stack.last_mut() {
+        scope.push(print_node);
+    }
+
+    // Require semicolon
+    if let Some(token) = token_iter.peek() {
+        if token.token == Token::Semicolon {
+            token_iter.next(); // Consume semicolon
+        } else {
+            // Error for missing semicolon
+            return Err(KdnLangError::parser_error(
+                "".to_string(),
+                "unknown",
+                (0, 0),
+                "Missing semicolon after print statement",
+                "KdnLang requires semicolons at the end of statements, like: print \"Hello\";",
+            )
+            .into());
+        }
+    } else {
+        // End of input without semicolon
+        return Err(KdnLangError::parser_error(
+            "".to_string(),
+            "unknown",
+            (0, 0),
+            "Missing semicolon at end of print statement",
+            "KdnLang requires semicolons at the end of statements, like: print \"Hello\";",
+        )
+        .into());
+    }
+
+    Ok(())
+}

@@ -16,14 +16,6 @@ impl Environment {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn with_parent(parent: Environment) -> Self {
-        Self {
-            variables: HashMap::new(),
-            parent: Some(Box::new(parent)),
-        }
-    }
-
     pub fn define(&mut self, name: String, value: Value) {
         self.variables.insert(name, value);
     }
@@ -42,20 +34,13 @@ impl Environment {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn assign(&mut self, name: &str, value: Value) -> Result<(), String> {
-        if self.variables.contains_key(name) {
-            self.variables.insert(name.to_string(), value);
-            Ok(())
-        } else if let Some(parent) = &mut self.parent {
-            parent.assign(name, value)
-        } else {
-            Err(format!("Undefined variable '{}'", name))
-        }
-    }
-
     pub fn get_builtin_function(&self, name: &str) -> Option<stdlib::BuiltinFunction> {
         let builtins: &HashMap<String, stdlib::BuiltinFunction> = stdlib::get_builtins();
         builtins.get(name).copied()
+    }
+
+    // New method to get all variables in the current environment
+    pub fn get_all_vars(&self) -> HashMap<String, Value> {
+        self.variables.clone()
     }
 }

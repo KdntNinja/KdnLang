@@ -11,7 +11,7 @@ string_lit = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "'" ~ (!"\'" ~ ANY)* ~ "'" }
 bool_lit = @{ "true" | "false" }
 
 // Type system
-type_name = { "int" | "float" | "str" | "bool" | "void" | identifier }
+type_name = { "int" | "float" | "string" | "str" | "bool" | "void" | identifier }
 type_annotation = { ":" ~ type_name }
 
 // Operators
@@ -31,6 +31,9 @@ additive_expr = { multiplicative_expr ~ (arithmetic_op ~ multiplicative_expr)* }
 comparison_expr = { additive_expr ~ (comparison_op ~ additive_expr)* }
 logical_expr = { comparison_expr ~ (logical_op ~ comparison_expr)* }
 expr = { logical_expr }
+
+// Python-style print statement (without parentheses)
+print_statement = { "print" ~ expr ~ ";" }
 
 // Statements - ensure all statement types that should end with semicolons do so
 var_decl = { "let" ~ identifier ~ type_annotation? ~ assignment_op ~ expr ~ ";" }
@@ -74,6 +77,7 @@ statement = {
     struct_def |
     match_statement |
     return_statement |
+    print_statement |
     expr_statement |
     block
 }

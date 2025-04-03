@@ -1,5 +1,4 @@
 use std::boxed::Box;
-use std::collections::HashMap;
 use std::string::String;
 use std::vec::Vec;
 
@@ -13,17 +12,13 @@ pub enum ASTNode {
         variable: String,
         type_annotation: String,
         value: Box<ASTNode>,
+        type_span: Option<(usize, usize)>,
     },
     Function {
         name: String,
-        parameters: Vec<(String, String)>, // (name, type)
+        parameters: Vec<(String, String)>,
         return_type: String,
         body: Vec<ASTNode>,
-    },
-    #[allow(dead_code)] // Added to suppress warning for unused variant
-    Struct {
-        name: String,
-        fields: HashMap<String, String>,
     },
     Match {
         expression: Box<ASTNode>,
