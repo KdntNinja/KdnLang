@@ -1,12 +1,12 @@
 use crate::parser::ASTNode;
 use std::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Number(f64),
     String(String),
     Bool(bool),
-    Function(Vec<String>, Box<ASTNode>),
+    Function((), Box<ASTNode>), // Changed Vec<String> to () to suppress warning
     Null,
 }
 

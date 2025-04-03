@@ -1,7 +1,2 @@
-let name: str = input("Enter your name: ");
-
-if (name == "kaiden") {
-    print(name);
-} else {
-    print("Bye");
-}
+let num: int = 3;
+print(num);

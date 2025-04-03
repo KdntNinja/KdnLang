@@ -1,4 +1,4 @@
-use crate::error_handling::errors::RuntimeError;
+use crate::error_handling::errors::KdnLangError;
 use crate::interpreter::{Environment, Value};
 use crate::parser::ASTNode;
 use miette::SourceSpan;
@@ -32,11 +32,41 @@ impl EvalContext {
     }
 }
 
+// Helper function to get the type of a value as a string
+fn type_of_value(value: &Value) -> &'static str {
+    match value {
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Bool(_) => "boolean",
+        Value::Function(_, _) => "function",
+        Value::Null => "null",
+    }
+}
+
+// Helper function to check if types are compatible
+fn is_compatible(expected: &str, actual: &str) -> bool {
+    if expected == actual || expected == "any" {
+        return true;
+    }
+
+    // Allow number to be assigned to int or float
+    if (expected == "int" || expected == "float") && actual == "number" {
+        return true;
+    }
+    
+    // Existing rule for float compatibility
+    if expected == "float" && actual == "number" {
+        return true;
+    }
+
+    false
+}
+
 pub fn evaluate(
     node: &ASTNode,
     env: &mut Environment,
     ctx: &EvalContext,
-) -> Result<Value, RuntimeError> {
+) -> Result<Value, KdnLangError> {
     match node {
         ASTNode::Block(nodes) => {
             let mut result: Value = Value::Null;
@@ -48,12 +78,12 @@ pub fn evaluate(
         ASTNode::Number(n) => {
             let parsed_result: Result<f64, _> = n.parse::<f64>();
             parsed_result.map(Value::Number).map_err(|_| {
-                RuntimeError::new(
+                KdnLangError::runtime_error(
                     ctx.source_code.clone(),
                     &ctx.filename,
                     ctx.span(),
                     format!("Failed to parse number: {}", n),
-                    Some(format!("Make sure '{}' is a valid number format.", n)),
+                    format!("Make sure '{}' is a valid number format.", n),
                 )
             })
         }
@@ -61,15 +91,23 @@ pub fn evaluate(
             let content: String = s.trim_matches(|c: char| c == '\'' || c == '"').to_string();
             Ok(Value::String(content))
         }
+        ASTNode::BooleanLiteral(b) => Ok(Value::Bool(*b)),
         ASTNode::Identifier(name) => {
+            // Special handling for boolean literals 'true' and 'false'
+            if name == "true" {
+                return Ok(Value::Bool(true));
+            } else if name == "false" {
+                return Ok(Value::Bool(false));
+            }
+
             let lookup_result: Option<Value> = env.get(name);
             lookup_result.ok_or_else(|| {
-                RuntimeError::new(
+                KdnLangError::runtime_error(
                     ctx.source_code.clone(),
                     &ctx.filename,
                     ctx.span(),
                     format!("Undefined variable: {}", name),
-                    Some(format!("Make sure '{}' is defined before using it.", name)),
+                    format!("Make sure '{}' is defined before using it.", name),
                 )
             })
         }
@@ -81,24 +119,69 @@ pub fn evaluate(
             let left_value = evaluate(left, env, ctx)?;
             let right_value = evaluate(right, env, ctx)?;
 
+            // Additional runtime type checking
             match (operator.as_str(), &left_value, &right_value) {
-                ("==", Value::String(a), Value::String(b)) => Ok(Value::Bool(a == b)),
-                ("==", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a == b)),
-                ("!=", Value::String(a), Value::String(b)) => Ok(Value::Bool(a != b)),
-                ("!=", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a != b)),
+                // Enforce numeric operators on numeric types
+                ("+" | "-" | "*" | "/" | "%", Value::Number(a), Value::Number(b)) => {
+                    match operator.as_str() {
+                        "+" => Ok(Value::Number(a + b)),
+                        "-" => Ok(Value::Number(a - b)),
+                        "*" => Ok(Value::Number(a * b)),
+                        "/" => {
+                            if *b == 0.0 {
+                                Err(KdnLangError::runtime_error(
+                                    ctx.source_code.clone(),
+                                    &ctx.filename,
+                                    ctx.span(),
+                                    "Division by zero",
+                                    "Cannot divide by zero".to_string(),
+                                ))
+                            } else {
+                                Ok(Value::Number(a / b))
+                            }
+                        }
+                        "%" => {
+                            if *b == 0.0 {
+                                Err(KdnLangError::runtime_error(
+                                    ctx.source_code.clone(),
+                                    &ctx.filename,
+                                    ctx.span(),
+                                    "Modulo by zero",
+                                    "Cannot compute modulo by zero".to_string(),
+                                ))
+                            } else {
+                                Ok(Value::Number(a % b))
+                            }
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+
+                // String concatenation
+                ("+", Value::String(a), Value::String(b)) => Ok(Value::String(a.clone() + b)),
+
+                // Allow equality comparisons between any types
+                ("==", a, b) => Ok(Value::Bool(format!("{:?}", a) == format!("{:?}", b))),
+                ("!=", a, b) => Ok(Value::Bool(format!("{:?}", a) != format!("{:?}", b))),
+
+                // Comparison operators with appropriate types
                 ("<", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a < b)),
                 (">", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a > b)),
                 ("<=", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a <= b)),
                 (">=", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a >= b)),
-                _ => Err(RuntimeError::new(
+
+                // Type error for incompatible operations
+                _ => Err(KdnLangError::runtime_error(
                     ctx.source_code.clone(),
                     &ctx.filename,
                     ctx.span(),
                     format!(
-                        "Unsupported operation: {:?} {} {:?}",
-                        left_value, operator, right_value
+                        "Type error: Cannot apply operator '{}' to values of type {} and {}",
+                        operator,
+                        type_of_value(&left_value),
+                        type_of_value(&right_value)
                     ),
-                    Some("Make sure the operator is supported for these value types.".to_string()),
+                    "Ensure both operands have compatible types for this operation.".to_string(),
                 )),
             }
         }
@@ -130,29 +213,57 @@ pub fn evaluate(
                         Ok(Value::Null)
                     }
                 }
-                _ => Err(RuntimeError::new(
+                _ => Err(KdnLangError::runtime_error(
                     ctx.source_code.clone(),
                     &ctx.filename,
                     ctx.span(),
                     "Condition must evaluate to a boolean value".to_string(),
-                    Some("The if condition must evaluate to true or false.".to_string()),
+                    "The if condition must evaluate to true or false.".to_string(),
                 )),
             }
         }
         ASTNode::Assignment {
             variable,
-            type_annotation: _,
+            type_annotation,
             value,
         } => {
             let eval_value: Value = evaluate(value, env, ctx)?;
+
+            // Runtime type checking for assignments
+            let expected_type = type_annotation.as_str();
+            let value_type = type_of_value(&eval_value);
+
+            // Check type compatibility (simple check for demonstration)
+            if expected_type != "any"
+                && expected_type != value_type
+                && !is_compatible(expected_type, value_type)
+            {
+                return Err(KdnLangError::runtime_error(
+                    ctx.source_code.clone(),
+                    &ctx.filename,
+                    ctx.span(),
+                    format!(
+                        "Type error: Cannot assign value of type {} to variable '{}' of type {}",
+                        value_type, variable, expected_type
+                    ),
+                    "Make sure the types match or use explicit type conversion.".to_string(),
+                )
+                .into());
+            }
+
             env.define(variable.clone(), eval_value);
             Ok(Value::Null)
         }
-        ASTNode::Function { name, body } => {
-            // Wrap the body in a Box<ASTNode> and store the function in the environment
+        ASTNode::Function {
+            name,
+            parameters: _,
+            return_type: _,
+            body,
+        } => {
+            // Updated to use unit type () instead of Vec<String>
             env.define(
                 name.clone(),
-                Value::Function(vec![], Box::new(ASTNode::Block(body.clone()))),
+                Value::Function((), Box::new(ASTNode::Block(body.clone()))),
             );
             Ok(Value::Null)
         }
@@ -175,7 +286,7 @@ pub fn evaluate(
             }
 
             if name == "print" {
-                let evaluated_args: Result<Vec<String>, RuntimeError> = args
+                let evaluated_args: Result<Vec<String>, KdnLangError> = args
                     .iter()
                     .map(|arg| {
                         evaluate(arg, env, ctx).map(|val| match val {
@@ -204,15 +315,12 @@ pub fn evaluate(
                             s.trim_matches(|c: char| c == '\'' || c == '"').to_string();
                         Ok(Value::String(content))
                     }
-                    _ => Err(RuntimeError::new(
+                    _ => Err(KdnLangError::runtime_error(
                         ctx.source_code.clone(),
                         &ctx.filename,
                         ctx.span(),
                         format!("Unexpected return from built-in function: {:?}", result),
-                        Some(format!(
-                            "The function '{}' returned an unexpected value type.",
-                            name
-                        )),
+                        format!("The function '{}' returned an unexpected value type.", name),
                     )),
                 }
             } else if let Some(Value::Function(_, body)) = env.get(name) {
@@ -220,34 +328,34 @@ pub fn evaluate(
                 evaluate(&body, env, ctx)?;
                 Ok(Value::Null)
             } else {
-                Err(RuntimeError::new(
+                Err(KdnLangError::runtime_error(
                     ctx.source_code.clone(),
                     &ctx.filename,
                     ctx.span(),
                     format!("Undefined function: {}", name),
-                    Some(format!(
+                    format!(
                         "The function '{}' is not defined. Check for typos or make sure it's imported.",
                         name
-                    )),
+                    ),
                 ))
             }
         }
         ASTNode::Operator(_) => {
             // Operators should be handled in binary expressions
-            Err(RuntimeError::new(
+            Err(KdnLangError::runtime_error(
                 ctx.source_code.clone(),
                 &ctx.filename,
                 ctx.span(),
                 "Standalone operator not supported".to_string(),
-                Some("Operators should be used in expressions.".to_string()),
+                "Operators should be used in expressions.".to_string(),
             ))
         }
-        _ => Err(RuntimeError::new(
+        _ => Err(KdnLangError::runtime_error(
             ctx.source_code.clone(),
             &ctx.filename,
             ctx.span(),
             format!("Unimplemented node type: {:?}", node),
-            Some("This language feature is not yet implemented.".to_string()),
+            "This language feature is not yet implemented.".to_string(),
         )),
     }
 }

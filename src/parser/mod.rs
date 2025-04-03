@@ -1,6 +1,6 @@
-mod ast;
+pub mod ast;
 mod expression_parser;
-mod parser_impl;
+pub mod parser_impl;
 
 pub use ast::ASTNode;
 pub use parser_impl::parse_program;

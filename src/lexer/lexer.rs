@@ -1,20 +1,23 @@
-use crate::error_handling::errors::LexingError;
+use crate::error_handling::errors::KdnLangError;
 use crate::lexer::tokens::{Token, TokenWithSpan};
 use logos::Logos;
 use miette::Result;
 use std::ops::Range;
 
-pub fn tokenize<'a>(code: &'a str, filename: &str) -> Result<Vec<TokenWithSpan<'a>>, LexingError> {
-    let mut lexer: logos::Lexer<'a, Token> = Token::lexer(code);
-    let mut tokens: Vec<TokenWithSpan<'a>> = Vec::new();
+pub fn tokenize<'a>(
+    input: &'a str,
+    filename: &str,
+) -> Result<Vec<TokenWithSpan<'a>>, miette::Error> {
+    let mut lexer = Token::lexer(input);
+    let mut tokens = Vec::new();
 
     while let Some(result) = lexer.next() {
         match result {
             Ok(token) => {
                 let span: Range<usize> = lexer.span();
-                let lexeme: &'a str = &code[span.start..span.end];
+                let lexeme: &'a str = &input[span.start..span.end];
 
-                let token_with_span: TokenWithSpan<'a> = TokenWithSpan {
+                let token_with_span = TokenWithSpan {
                     token,
                     lexeme,
                     span: span.start..span.end,
@@ -23,14 +26,15 @@ pub fn tokenize<'a>(code: &'a str, filename: &str) -> Result<Vec<TokenWithSpan<'
             }
             Err(_) => {
                 let span: Range<usize> = lexer.span();
-                let unexpected_token: &str = &code[span.clone()];
+                let unexpected_token: &str = &input[span.clone()];
                 let message: String = format!("Unexpected token: '{}'", unexpected_token);
-                return Err(LexingError::new(
-                    code.to_string(),
+                return Err(KdnLangError::from_unexpected_token(
+                    input.to_string(),
                     filename,
                     span,
                     Some(message),
-                ));
+                )
+                .into());
             }
         }
     }

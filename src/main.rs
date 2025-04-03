@@ -8,6 +8,7 @@ mod interpreter;
 mod lexer;
 mod parser;
 mod stdlib;
+mod typecheck; // Add the new module
 
 #[derive(Parser)]
 #[command(
@@ -40,6 +41,9 @@ fn main() -> Result<()> {
 
     // Parsing
     let ast: parser::ASTNode = parser::parse_program(&tokens, filename)?;
+
+    // Type checking (new step)
+    typecheck::typecheck_program(&ast, filename, &code)?;
 
     // Execution
     let mut interpreter: interpreter::Interpreter =

@@ -1,55 +1,83 @@
 use logos::Logos;
 use std::ops::Range;
 
-#[derive(Logos, Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Logos)]
 pub enum Token {
-    // Keywords
-    #[regex(r"let|fn|struct|match|try|except|async|await", priority = 3)]
-    Keyword,
-
-    // Matches type keywords like `&str`, `i32`, `f64`, etc.
-    #[regex(r"&str|i32|f64", priority = 4)]
-    TypeKeyword,
-
-    // Identifiers
-    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", priority = 1)]
+    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", priority = 2)]
     Identifier,
 
-    // Literals
-    #[regex(r"[0-9]+")]
-    Number,
-    #[regex(r#"[\"']([^\"'\\]|\\.)*[\"']"#, priority = 2)]
+    #[regex(
+        r"let|fn|if|else|match|try|except|for|while|return|break|continue",
+        priority = 3
+    )]
+    Keyword,
+
+    #[token("true", priority = 4)]
+    #[token("false", priority = 4)]
+    BoolLiteral,
+
+    #[regex(r#""([^"\\]|\\.)*""#)]
+    #[regex(r#"'([^'\\]|\\.)*'"#)]
     StringLiteral,
 
-    // Operators
-    #[regex(r"[+\-*/%]")]
+    #[regex(r"[0-9]+(\.[0-9]+)?")]
+    Number,
+
+    #[regex(r"==|!=|<=|>=|<|>|\+|-|\*|/|=")]
     Operator,
 
-    // Match arrow operator
-    #[token("=>")]
-    MatchArrow,
+    #[regex(r"[ \t\n\r]+", logos::skip)]
+    Whitespace,
 
-    // Punctuation with clear distinction for semicolons
+    #[regex(r"//.*", logos::skip)]
+    Comment,
+
     #[token(";")]
     Semicolon,
 
-    #[regex(r"[=,.]")]
-    Punctuation,
-
-    // Brackets
-    #[regex(r"[(){}\[\]]")]
-    Bracket,
-
-    // Colon
-    #[regex(r":", priority = 5)]
+    #[token(":")]
     Colon,
 
-    // Skips whitespace characters
-    #[regex(r"\s+", logos::skip)]
-    Whitespace,
+    #[token(",")]
+    Comma,
+
+    #[token("(")]
+    LeftParen,
+
+    #[token(")")]
+    RightParen,
+
+    #[token("{")]
+    LeftBrace,
+
+    #[token("}")]
+    RightBrace,
+
+    #[token("[")]
+    LeftBracket,
+
+    #[token("]")]
+    RightBracket,
+
+    #[token("->")]
+    Arrow,
+
+    #[token("=>")]
+    FatArrow,
+
+    #[token(".")]
+    Dot,
+
+    // These variants are kept for future use but marked to suppress warnings
+    #[allow(dead_code)]
+    Illegal,
+
+    #[allow(dead_code)]
+    EOF,
 }
 
-#[derive(Debug)]
+// Data structure to store a token along with its lexeme and span
+#[derive(Debug, Clone)]
 pub struct TokenWithSpan<'a> {
     pub token: Token,
     pub lexeme: &'a str,

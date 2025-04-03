@@ -5,29 +5,19 @@ use crate::parser::call_parser::{parse_function_call, parse_print};
 use crate::parser::conditional_parser::parse_if_statement;
 use crate::parser::function_parser::parse_function;
 use crate::parser::variable_parser::parse_variable;
-use miette::{Diagnostic, NamedSource, Result, SourceSpan};
+use miette::Result;
 use pest::error::InputLocation;
-use pest_derive::Parser;
-use thiserror::Error;
+use pest_derive::Parser; // Use pest_derive for the Parser derive macro
 
 #[derive(Parser)]
 #[grammar = "parser/grammar.pest"]
 #[allow(dead_code)]
 pub struct KdnLangParser;
 
-#[derive(Debug, Diagnostic, Error)]
-#[error("Parse error")]
-#[diagnostic(code(kdnlang::parser::error), help("Check the syntax of your input."))]
-pub struct ParseError {
-    #[source_code]
-    pub src: NamedSource<String>,
-
-    #[label("Error occurred here")]
-    pub span: SourceSpan,
-}
+// The Rule enum is automatically made public and available
 
 #[allow(dead_code)]
-pub fn convert_location_to_span(location: InputLocation) -> SourceSpan {
+pub fn convert_location_to_span(location: InputLocation) -> miette::SourceSpan {
     match location {
         InputLocation::Pos(pos) => (pos, 1).into(), // Single position
         InputLocation::Span((start, end)) => (start, end - start).into(), // Span range
@@ -51,6 +41,7 @@ pub fn parse_program(
         String::new()
     };
 
+    // Using the pest grammar rule mapping to process tokens
     while let Some(token) = token_iter.peek() {
         match token.token {
             Token::Keyword if token.lexeme == "fn" => {
@@ -65,21 +56,71 @@ pub fn parse_program(
                 token_iter.next();
                 parse_if_statement(&mut token_iter, &mut scope_stack)?;
             }
+            Token::Keyword if token.lexeme == "while" => {
+                // Would implement parse_while_statement here
+                token_iter.next();
+            }
+            Token::Keyword if token.lexeme == "struct" => {
+                // Would implement parse_struct_definition here
+                token_iter.next();
+            }
+            Token::Keyword if token.lexeme == "match" => {
+                // Would implement parse_match_statement here
+                token_iter.next();
+            }
+            Token::Keyword if token.lexeme == "return" => {
+                // Would implement parse_return_statement here
+                token_iter.next();
+            }
             Token::Identifier if token.lexeme == "print" => {
                 token_iter.next();
                 parse_print(&mut token_iter, &mut scope_stack)?;
             }
-            Token::StringLiteral => {
-                let string_node = ASTNode::StringLiteral(token.lexeme.to_string());
-                if let Some(scope) = scope_stack.last_mut() {
-                    scope.push(string_node);
+            Token::Identifier => {
+                // First check if it's a function call, otherwise handle as an identifier
+                let next_token = token_iter.clone().nth(1);
+                if let Some(nt) = next_token {
+                    if nt.token == Token::LeftParen {
+                        parse_function_call(&mut token_iter, &mut scope_stack)?;
+                    } else if nt.token == Token::Operator && nt.lexeme == "=" {
+                        // Would implement parse_assignment here
+                        token_iter.next();
+                    } else {
+                        // Unhandled identifier usage
+                        token_iter.next();
+                    }
+                } else {
+                    token_iter.next();
+                }
+            }
+            Token::StringLiteral | Token::Number | Token::BoolLiteral => {
+                // Handle literals - for now just add literals as nodes
+                match token.token {
+                    Token::StringLiteral => {
+                        let string_node = ASTNode::StringLiteral(token.lexeme.to_string());
+                        if let Some(scope) = scope_stack.last_mut() {
+                            scope.push(string_node);
+                        }
+                    }
+                    Token::Number => {
+                        let num_node = ASTNode::Number(token.lexeme.to_string());
+                        if let Some(scope) = scope_stack.last_mut() {
+                            scope.push(num_node);
+                        }
+                    }
+                    Token::BoolLiteral => {
+                        let bool_value = token.lexeme == "true";
+                        let bool_node = ASTNode::BooleanLiteral(bool_value);
+                        if let Some(scope) = scope_stack.last_mut() {
+                            scope.push(bool_node);
+                        }
+                    }
+                    _ => {}
                 }
                 token_iter.next();
             }
-            Token::Identifier => {
-                parse_function_call(&mut token_iter, &mut scope_stack)?;
-            }
             _ => {
+                // Skip unhandled tokens
                 token_iter.next();
             }
         }

@@ -136,19 +136,22 @@ kdnlang --file script.kdn
 ```plaintext
 KdnLang/
 ├── src/
-│   ├── lexer.rs        # Tokenizer
-│   ├── parser.rs       # AST generator
-│   ├── type_checker.rs # Static type checking
-│   ├── interpreter.rs  # Executes AST
-│   ├── compiler.rs     # Bytecode/Machine code generation (Future)
-│   ├── repl.rs         # Interactive REPL
-│   ├── stdlib/         # Standard library
+│   ├── lexer/         # Tokenizer
+│   │   ├── mod.rs
+│   │   ├── lexer.rs
+│   ├── parser/        # AST generator
+│   │   ├── mod.rs
+│   │   ├── parser.rs
+│   ├── typechecker/   # Static type checking
+│   │   ├── mod.rs
+│   │   ├── typechecker.rs
+│   ├── interpreter/  # Executes AST
+│   │   ├── mod.rs
+│   │   ├── interpreter.rs
 │   ├── main.rs         # Entry point
 ├── examples/           # Sample KdnLang scripts
-├── docs/               # Documentation
 ├── tests/              # Unit tests
-├── README.md           # Project documentation
-└── Cargo.toml          # Rust package configuration
+├── Cargo.toml          # Rust package configuration
 ```
 
 ### Development Milestones - TODO

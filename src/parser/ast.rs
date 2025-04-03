@@ -8,6 +8,7 @@ pub enum ASTNode {
     Number(String),
     Operator(String),
     Identifier(String),
+    BooleanLiteral(bool),
     Assignment {
         variable: String,
         type_annotation: String,
@@ -15,8 +16,11 @@ pub enum ASTNode {
     },
     Function {
         name: String,
+        parameters: Vec<(String, String)>, // (name, type)
+        return_type: String,
         body: Vec<ASTNode>,
     },
+    #[allow(dead_code)] // Added to suppress warning for unused variant
     Struct {
         name: String,
         fields: HashMap<String, String>,
@@ -24,6 +28,11 @@ pub enum ASTNode {
     Match {
         expression: Box<ASTNode>,
         arms: Vec<(String, ASTNode)>,
+    },
+    BinaryExpression {
+        left: Box<ASTNode>,
+        operator: String,
+        right: Box<ASTNode>,
     },
     StringLiteral(String),
     Block(Vec<ASTNode>),

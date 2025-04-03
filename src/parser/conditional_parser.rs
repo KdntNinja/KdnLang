@@ -1,21 +1,8 @@
+use crate::error_handling::errors::KdnLangError;
 use crate::lexer::tokens::TokenWithSpan;
 use crate::lexer::Token;
 use crate::parser::ast::ASTNode;
-use miette::{Diagnostic, NamedSource, Result, SourceSpan};
-use thiserror::Error;
-
-#[derive(Debug, Diagnostic, Error)]
-#[error("Conditional parsing error: {message}")]
-#[diagnostic(code(kdnlang::parser::conditional::error))]
-pub struct ConditionalParseError {
-    #[source_code]
-    pub src: NamedSource<String>,
-
-    #[label("Error occurred here")]
-    pub span: SourceSpan,
-
-    pub message: String,
-}
+use miette::Result;
 
 pub fn parse_if_statement(
     token_iter: &mut std::iter::Peekable<std::slice::Iter<'_, TokenWithSpan<'_>>>,
@@ -24,12 +11,13 @@ pub fn parse_if_statement(
     // Parse condition (inside parentheses)
     if let Some(token) = token_iter.next() {
         if token.token != Token::LeftParen {
-            return Err(ConditionalParseError {
-                src: NamedSource::new("unknown", String::new()),
-                span: (token.span.0, token.span.1 - token.span.0).into(),
-                message: "Expected '(' after 'if'".to_string(),
-            }
-            .into());
+            return Err(KdnLangError::parser_error(
+                "".to_string(), // Empty source since we don't have it here
+                "unknown",
+                (token.span.start, token.span.end - token.span.start),
+                "Expected '(' after 'if'",
+                "The if statement condition should be wrapped in parentheses, like: if (condition) { ... }",
+            ).into());
         }
     }
 
@@ -54,19 +42,26 @@ pub fn parse_if_statement(
             Token::Identifier => {
                 condition_parts.push(ASTNode::Identifier(token.lexeme.to_string()));
             }
+            Token::BoolLiteral => {
+                let value = token.lexeme == "true";
+                condition_parts.push(ASTNode::BooleanLiteral(value));
+            }
             Token::StringLiteral => {
                 condition_parts.push(ASTNode::StringLiteral(token.lexeme.to_string()));
             }
-            Token::NumberLiteral => {
+            Token::Number => {
                 condition_parts.push(ASTNode::Number(token.lexeme.to_string()));
             }
-            Token::Equal => {
+            Token::Operator if token.lexeme == "=" => {
                 // For now, we'll handle basic equality comparison
                 if let Some(next_token) = token_iter.next() {
-                    if next_token.token == Token::Equal {
+                    if next_token.token == Token::Operator && next_token.lexeme == "=" {
                         condition_parts.push(ASTNode::Operator("==".to_string()));
                     }
                 }
+            }
+            Token::Operator => {
+                condition_parts.push(ASTNode::Operator(token.lexeme.to_string()));
             }
             _ => {}
         }
@@ -86,8 +81,12 @@ pub fn parse_if_statement(
             operator,
             right,
         })
+    } else if condition_parts.len() == 1 {
+        // Single condition (probably a boolean or variable)
+        Box::new(condition_parts[0].clone())
     } else {
-        Box::new(ASTNode::Identifier("true".to_string())) // Fallback
+        // Default to true if no condition found (shouldn't happen in valid code)
+        Box::new(ASTNode::BooleanLiteral(true))
     };
 
     // Parse 'then' branch (statements inside braces)
@@ -96,11 +95,13 @@ pub fn parse_if_statement(
     // Check for opening brace
     if let Some(token) = token_iter.next() {
         if token.token != Token::LeftBrace {
-            return Err(ConditionalParseError {
-                src: NamedSource::new("unknown", String::new()),
-                span: (token.span.0, token.span.1 - token.span.0).into(),
-                message: "Expected '{' after condition".to_string(),
-            }
+            return Err(KdnLangError::parser_error(
+                "".to_string(),
+                "unknown",
+                (token.span.start, token.span.end - token.span.start),
+                "Expected '{' after condition",
+                "The if statement body should be wrapped in braces, like: if (condition) { ... }",
+            )
             .into());
         }
     }
@@ -133,50 +134,63 @@ pub fn parse_if_statement(
         then_branch = inner_scope;
     }
 
-    // Check for 'else' branch
+    // Check for 'else if' before checking for just 'else'
     let mut else_branch = None;
 
     if let Some(token) = token_iter.peek() {
         if token.token == Token::Keyword && token.lexeme == "else" {
             token_iter.next(); // Consume 'else'
 
-            // Check for opening brace
-            if let Some(token) = token_iter.next() {
-                if token.token != Token::LeftBrace {
-                    return Err(ConditionalParseError {
-                        src: NamedSource::new("unknown", String::new()),
-                        span: (token.span.0, token.span.1 - token.span.0).into(),
-                        message: "Expected '{' after 'else'".to_string(),
-                    }
-                    .into());
-                }
-            }
-
-            // Parse the statements inside the else branch
-            scope_stack.push(Vec::new());
-
-            // Skip content within else branch for now (simplified)
-            let mut brace_count = 1;
-            while let Some(token) = token_iter.peek() {
-                match token.token {
-                    Token::LeftBrace => {
-                        brace_count += 1;
-                    }
-                    Token::RightBrace => {
-                        brace_count -= 1;
-                        if brace_count == 0 {
-                            token_iter.next(); // Consume the right brace
-                            break;
+            // Check if this is an "else if" statement
+            if let Some(next_token) = token_iter.peek() {
+                if next_token.token == Token::Keyword && next_token.lexeme == "if" {
+                    // This is an "else if" block - would need to recursively handle this
+                    // For simplicity, we'll just consume the tokens but in a real implementation
+                    // would need to properly parse the nested if statement
+                    token_iter.next(); // Consume 'if'
+                } else {
+                    // Regular 'else' block
+                    // Check for opening brace
+                    if let Some(token) = token_iter.next() {
+                        if token.token != Token::LeftBrace {
+                            return Err(KdnLangError::parser_error(
+                                "".to_string(),
+                                "unknown",
+                                (token.span.start, token.span.end - token.span.start),
+                                "Expected '{' after 'else'",
+                                "The else statement body should be wrapped in braces, like: else { ... }",
+                            )
+                            .into());
                         }
                     }
-                    _ => {}
+
+                    // Parse the statements inside the else branch
+                    scope_stack.push(Vec::new());
+
+                    // Skip content within else branch for now (simplified)
+                    let mut brace_count = 1;
+                    while let Some(token) = token_iter.peek() {
+                        match token.token {
+                            Token::LeftBrace => {
+                                brace_count += 1;
+                            }
+                            Token::RightBrace => {
+                                brace_count -= 1;
+                                if brace_count == 0 {
+                                    token_iter.next(); // Consume the right brace
+                                    break;
+                                }
+                            }
+                            _ => {}
+                        }
+
+                        token_iter.next();
+                    }
+
+                    if let Some(inner_scope) = scope_stack.pop() {
+                        else_branch = Some(inner_scope);
+                    }
                 }
-
-                token_iter.next();
-            }
-
-            if let Some(inner_scope) = scope_stack.pop() {
-                else_branch = Some(inner_scope);
             }
         }
     }

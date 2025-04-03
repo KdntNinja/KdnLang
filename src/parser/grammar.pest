@@ -1,54 +1,82 @@
-// Define basic building blocks
-digit = _{ '0'..'9' }
-letter = _{ 'a'..'z' | 'A'..'Z' }
-identifier = @{ letter ~ (letter | digit | "_")* }
-number = @{ digit+ }
-string_literal = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "'" ~ (!"'" ~ ANY)* ~ "'" }
+// Basic tokens
+WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
+COMMENT = _{ "//" ~ (!"\n" ~ ANY)* ~ "\n" }
 
-// Define operators and punctuation
-operator = { "+" | "-" | "*" | "/" }
-punctuation = { "=" | ";" }
+// Identifiers and literals
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+int_lit = @{ ASCII_DIGIT+ }
+float_lit = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+number = @{ float_lit | int_lit }
+string_lit = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "'" ~ (!"\'" ~ ANY)* ~ "'" }
+bool_lit = @{ "true" | "false" }
 
-// Define type_keyword rule
-type_keyword = { "str" | "i32" | "f64" }
+// Type system
+type_name = { "int" | "float" | "str" | "bool" | "void" | identifier }
+type_annotation = { ":" ~ type_name }
 
-// Add function call pattern
-function_call = { identifier ~ "(" ~ (expression ~ ("," ~ expression)*)? ~ ")" }
+// Operators
+comparison_op = { "==" | "!=" | "<" | "<=" | ">" | ">=" }
+arithmetic_op = { "+" | "-" | "*" | "/" | "%" }
+logical_op = { "&&" | "||" | "!" }
+assignment_op = { "=" }
+operator = { comparison_op | arithmetic_op | logical_op | assignment_op }
 
-// Define expression rules
-primary_expression = { number | string_literal | function_call | identifier }
-expression = { primary_expression ~ (operator ~ primary_expression)* }
+// Expressions
+literal = { number | string_lit | bool_lit }
+primary_expr = { literal | identifier | "(" ~ expr ~ ")" | function_call }
+function_call = { identifier ~ "(" ~ (expr ~ ("," ~ expr)*)? ~ ")" }
+unary_expr = { logical_op? ~ primary_expr }
+multiplicative_expr = { unary_expr ~ (arithmetic_op ~ unary_expr)* }
+additive_expr = { multiplicative_expr ~ (arithmetic_op ~ multiplicative_expr)* }
+comparison_expr = { additive_expr ~ (comparison_op ~ additive_expr)* }
+logical_expr = { comparison_expr ~ (logical_op ~ comparison_expr)* }
+expr = { logical_expr }
 
-// Update assignment rule to include 'let' keyword and semicolon
-assignment = { "let" ~ identifier ~ ":" ~ type_keyword ~ "=" ~ expression ~ ";" }
+// Statements - ensure all statement types that should end with semicolons do so
+var_decl = { "let" ~ identifier ~ type_annotation? ~ assignment_op ~ expr ~ ";" }
+assignment = { identifier ~ assignment_op ~ expr ~ ";" }
+expr_statement = { expr ~ ";" }  // All expression statements must end with semicolons
+return_statement = { "return" ~ expr? ~ ";" }
 
-// Define function rule (no semicolon needed for blocks)
-function = { "fn" ~ identifier ~ "(" ~ (identifier ~ ":" ~ type_keyword ~ ("," ~ identifier ~ ":" ~ type_keyword)*)? ~ ")" ~ block }
+// Function parameters
+param = { identifier ~ type_annotation? }
+param_list = { (param ~ ("," ~ param)*)? }
 
-// Define block rule
+// Structure definition parts
+struct_field = { identifier ~ type_annotation ~ ";" }
+
+// Control flow statements don't need semicolons
+if_statement = { 
+    "if" ~ "(" ~ expr ~ ")" ~ block ~ 
+    ("else" ~ "if" ~ "(" ~ expr ~ ")" ~ block)* ~ 
+    ("else" ~ block)? 
+}
+while_statement = { "while" ~ "(" ~ expr ~ ")" ~ block }
+
+// Block statements don't need semicolons
 block = { "{" ~ statement* ~ "}" }
 
-// Define match statement rule
-match_statement = { "match" ~ expression ~ "{" ~ (expression ~ "=>" ~ statement ~ ",")* ~ "_" ~ "=>" ~ statement ~ "}" }
+// Function and struct definitions don't need semicolons
+function_def = { "fn" ~ identifier ~ "(" ~ param_list ~ ")" ~ type_annotation? ~ block }
+struct_def = { "struct" ~ identifier ~ "{" ~ struct_field* ~ "}" }
 
-// Define try-except rule
-try_except = { "try" ~ block ~ "except" ~ block }
+// Match arm expressions in blocks don't need semicolons, but expressions followed by semicolons do
+match_arm = { expr ~ "=>" ~ (block | expr ~ ";") }
+match_statement = { "match" ~ expr ~ "{" ~ match_arm+ ~ "}" }
 
-// Expressions that need to be terminated with semicolons
-expression_statement = { expression ~ ";" }
-
-// Update statement rule to include semicolons
-statement = _{ 
-    assignment | 
-    expression_statement | 
-    function | 
-    match_statement | 
-    try_except |
+// Top-level statements
+statement = {
+    var_decl |
+    assignment |
+    if_statement |
+    while_statement |
+    function_def |
+    struct_def |
+    match_statement |
+    return_statement |
+    expr_statement |
     block
 }
 
-// Define top-level constructs
+// Program is a sequence of statements
 program = { SOI ~ statement* ~ EOI }
-
-// Skip whitespace and comments
-WHITESPACE = _{ " " | "\t" | "\n" | "//" ~ (!"\n" ~ ANY)* ~ "\n" }
