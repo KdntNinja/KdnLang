@@ -2,6 +2,7 @@ use crate::lexer::tokens::TokenWithSpan;
 use crate::lexer::Token;
 use crate::parser::ast::ASTNode;
 use crate::parser::call_parser::{parse_function_call, parse_print};
+use crate::parser::conditional_parser::parse_if_statement;
 use crate::parser::function_parser::parse_function;
 use crate::parser::variable_parser::parse_variable;
 use miette::{Diagnostic, NamedSource, Result, SourceSpan};
@@ -59,6 +60,10 @@ pub fn parse_program(
             Token::Keyword if token.lexeme == "let" => {
                 token_iter.next();
                 parse_variable(&mut token_iter, &mut scope_stack, &src_content, filename)?;
+            }
+            Token::Keyword if token.lexeme == "if" => {
+                token_iter.next();
+                parse_if_statement(&mut token_iter, &mut scope_stack)?;
             }
             Token::Identifier if token.lexeme == "print" => {
                 token_iter.next();

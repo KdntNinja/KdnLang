@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use std::string::String;
 use std::vec::Vec;
 
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ASTNode {
     Number(String),
     Operator(String),
@@ -31,6 +30,11 @@ pub enum ASTNode {
     FunctionCall {
         name: String,
         args: Vec<ASTNode>,
+    },
+    If {
+        condition: Box<ASTNode>,
+        then_branch: Vec<ASTNode>,
+        else_branch: Option<Vec<ASTNode>>,
     },
     Void,
 }

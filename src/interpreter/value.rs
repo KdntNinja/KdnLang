@@ -5,9 +5,7 @@ use std::fmt;
 pub enum Value {
     Number(f64),
     String(String),
-    #[allow(dead_code)] // Added to suppress warning
-    Boolean(bool),
-    #[allow(dead_code)] // Added to suppress warning
+    Bool(bool),
     Function(Vec<String>, Box<ASTNode>),
     Null,
 }
@@ -17,7 +15,7 @@ impl fmt::Display for Value {
         match self {
             Value::Number(n) => write!(f, "{}", n),
             Value::String(s) => write!(f, "{}", s),
-            Value::Boolean(b) => write!(f, "{}", b),
+            Value::Bool(b) => write!(f, "{}", b),
             Value::Function(_, _) => write!(f, "<function>"),
             Value::Null => write!(f, "null"),
         }
@@ -30,7 +28,7 @@ impl Value {
         match self {
             Value::Number(_) => "number",
             Value::String(_) => "string",
-            Value::Boolean(_) => "boolean",
+            Value::Bool(_) => "boolean",
             Value::Function(_, _) => "function",
             Value::Null => "null",
         }
@@ -39,7 +37,7 @@ impl Value {
     #[allow(dead_code)] // Added to suppress warning
     pub fn is_truthy(&self) -> bool {
         match self {
-            Value::Boolean(b) => *b,
+            Value::Bool(b) => *b,
             Value::Null => false,
             Value::Number(n) => *n != 0.0,
             Value::String(s) => !s.is_empty(),

@@ -73,6 +73,72 @@ pub fn evaluate(
                 )
             })
         }
+        ASTNode::BinaryExpression {
+            left,
+            operator,
+            right,
+        } => {
+            let left_value = evaluate(left, env, ctx)?;
+            let right_value = evaluate(right, env, ctx)?;
+
+            match (operator.as_str(), &left_value, &right_value) {
+                ("==", Value::String(a), Value::String(b)) => Ok(Value::Bool(a == b)),
+                ("==", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a == b)),
+                ("!=", Value::String(a), Value::String(b)) => Ok(Value::Bool(a != b)),
+                ("!=", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a != b)),
+                ("<", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a < b)),
+                (">", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a > b)),
+                ("<=", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a <= b)),
+                (">=", Value::Number(a), Value::Number(b)) => Ok(Value::Bool(a >= b)),
+                _ => Err(RuntimeError::new(
+                    ctx.source_code.clone(),
+                    &ctx.filename,
+                    ctx.span(),
+                    format!(
+                        "Unsupported operation: {:?} {} {:?}",
+                        left_value, operator, right_value
+                    ),
+                    Some("Make sure the operator is supported for these value types.".to_string()),
+                )),
+            }
+        }
+        ASTNode::If {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            let condition_result = evaluate(condition, env, ctx)?;
+
+            match condition_result {
+                Value::Bool(true) => {
+                    // Execute the then branch
+                    let mut result = Value::Null;
+                    for node in then_branch {
+                        result = evaluate(node, env, ctx)?;
+                    }
+                    Ok(result)
+                }
+                Value::Bool(false) => {
+                    // Execute the else branch if it exists
+                    if let Some(else_statements) = else_branch {
+                        let mut result = Value::Null;
+                        for node in else_statements {
+                            result = evaluate(node, env, ctx)?;
+                        }
+                        Ok(result)
+                    } else {
+                        Ok(Value::Null)
+                    }
+                }
+                _ => Err(RuntimeError::new(
+                    ctx.source_code.clone(),
+                    &ctx.filename,
+                    ctx.span(),
+                    "Condition must evaluate to a boolean value".to_string(),
+                    Some("The if condition must evaluate to true or false.".to_string()),
+                )),
+            }
+        }
         ASTNode::Assignment {
             variable,
             type_annotation: _,
@@ -115,6 +181,7 @@ pub fn evaluate(
                         evaluate(arg, env, ctx).map(|val| match val {
                             Value::String(s) => s,
                             Value::Number(n) => n.to_string(),
+                            Value::Bool(b) => b.to_string(),
                             _ => format!("{:?}", val),
                         })
                     })
@@ -164,6 +231,16 @@ pub fn evaluate(
                     )),
                 ))
             }
+        }
+        ASTNode::Operator(_) => {
+            // Operators should be handled in binary expressions
+            Err(RuntimeError::new(
+                ctx.source_code.clone(),
+                &ctx.filename,
+                ctx.span(),
+                "Standalone operator not supported".to_string(),
+                Some("Operators should be used in expressions.".to_string()),
+            ))
         }
         _ => Err(RuntimeError::new(
             ctx.source_code.clone(),

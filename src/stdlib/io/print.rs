@@ -12,7 +12,9 @@ pub fn print_fn(args: Vec<ASTNode>) -> ASTNode {
     let output: String = args
         .iter()
         .map(|arg| match arg {
-            ASTNode::StringLiteral(s) => s.trim_matches(|c: char| c == '\'' || c == '"').to_string(),
+            ASTNode::StringLiteral(s) => {
+                s.trim_matches(|c: char| c == '\'' || c == '"').to_string()
+            }
             ASTNode::Number(n) => n.to_string(),
             ASTNode::Identifier(id) => id.clone(),
             _ => format!("{:?}", arg),
