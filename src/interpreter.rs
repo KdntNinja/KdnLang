@@ -1,7 +1,6 @@
-// src/interpreter.rs - Code execution for KdnLang
+use std::collections::HashMap;
 use logos::Logos;
 use miette::{NamedSource, Report};
-use std::collections::HashMap;
 
 use crate::error::{KdnLangError, Result};
 use crate::lexer::Token;
@@ -65,7 +64,7 @@ pub fn interpret(input: &str) -> Result<()> {
                         }
                     }
                     let value = evaluate_expression_with_vars(&expr, &variables)?;
-
+                    
                     // Check if variable exists before assignment
                     if !variables.contains_key(&var_name) {
                         return Err(Report::new(KdnLangError {
@@ -74,7 +73,7 @@ pub fn interpret(input: &str) -> Result<()> {
                             help: Some(format!("Variable '{}' not declared", var_name)),
                         }));
                     }
-
+                    
                     variables.insert(var_name, value);
                 } else {
                     return Err(Report::new(KdnLangError {
@@ -125,10 +124,7 @@ pub fn interpret(input: &str) -> Result<()> {
                                     return Err(Report::new(KdnLangError {
                                         src: NamedSource::new("input", input.to_string()),
                                         span: (lexer.span().start, lexer.span().end).into(),
-                                        help: Some(
-                                            "Unexpected token while parsing range start"
-                                                .to_string(),
-                                        ),
+                                        help: Some("Unexpected token while parsing range start".to_string()),
                                     }));
                                 }
                             }
@@ -143,9 +139,7 @@ pub fn interpret(input: &str) -> Result<()> {
                                     return Err(Report::new(KdnLangError {
                                         src: NamedSource::new("input", input.to_string()),
                                         span: (lexer.span().start, lexer.span().end).into(),
-                                        help: Some(
-                                            "Unexpected token while parsing range end".to_string(),
-                                        ),
+                                        help: Some("Unexpected token while parsing range end".to_string()),
                                     }));
                                 }
                             }
@@ -153,24 +147,24 @@ pub fn interpret(input: &str) -> Result<()> {
 
                         let start = evaluate_expression_with_vars(&range_start, &variables)? as i64;
                         let end = evaluate_expression_with_vars(&range_end, &variables)? as i64;
-
+                        
                         // Read the entire block content
                         let mut block_content = String::new();
                         let mut brace_level = 1;
-
+                        
                         while let Some(inner_result) = lexer.next() {
                             match inner_result {
                                 Ok(Token::LBrace) => {
                                     brace_level += 1;
                                     block_content.push_str(lexer.slice());
-                                }
+                                },
                                 Ok(Token::RBrace) => {
                                     brace_level -= 1;
                                     if brace_level == 0 {
                                         break;
                                     }
                                     block_content.push_str(lexer.slice());
-                                }
+                                },
                                 Ok(_) => block_content.push_str(lexer.slice()),
                                 Err(_) => {
                                     return Err(Report::new(KdnLangError {
@@ -181,16 +175,16 @@ pub fn interpret(input: &str) -> Result<()> {
                                 }
                             }
                         }
-
+                        
                         // Execute the loop
                         for i in start..end {
                             // Update the loop variable for each iteration
                             let mut loop_variables = variables.clone();
                             loop_variables.insert(loop_var.clone(), i as f64);
-
+                            
                             // Execute the block with the current context
                             interpret_with_context(&block_content, &mut loop_variables)?;
-
+                            
                             // Update any variables that might have changed in the loop
                             for (key, value) in loop_variables.iter() {
                                 if key != &loop_var {
@@ -201,7 +195,7 @@ pub fn interpret(input: &str) -> Result<()> {
                     }
                 }
             }
-            Ok(_) => {}
+            Ok(_) => {},
             Err(_) => {
                 return Err(Report::new(KdnLangError {
                     src: NamedSource::new("input", input.to_string()),
@@ -271,7 +265,7 @@ fn interpret_with_context(input: &str, variables: &mut HashMap<String, f64>) -> 
                         }
                     }
                     let value = evaluate_expression_with_vars(&expr, &variables)?;
-
+                    
                     // Check if variable exists before assignment
                     if !variables.contains_key(&var_name) {
                         return Err(Report::new(KdnLangError {
@@ -280,7 +274,7 @@ fn interpret_with_context(input: &str, variables: &mut HashMap<String, f64>) -> 
                             help: Some(format!("Variable '{}' not declared", var_name)),
                         }));
                     }
-
+                    
                     variables.insert(var_name, value);
                 } else {
                     return Err(Report::new(KdnLangError {
@@ -322,7 +316,7 @@ fn interpret_with_context(input: &str, variables: &mut HashMap<String, f64>) -> 
                 // Nested loops - simplified for this version
                 // Can be expanded in the future for more complex cases
             }
-            Ok(_) => {}
+            Ok(_) => {},
             Err(_) => {
                 return Err(Report::new(KdnLangError {
                     src: NamedSource::new("input", input.to_string()),
