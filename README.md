@@ -1,109 +1,85 @@
-# 🚀 KdnLang: A Statically-Typed, Pythonic Language with Rust-Like Syntax
+# 🚀 KdnLang: A Simple Expression-Based Language
 
 ## 📖 Overview
 
-KdnLang is a modern programming language that combines **Rust's static typing** and **performance** with **Python's simplicity** and **ease of use**. It features:
+KdnLang is a lightweight programming language designed for simplicity and readability. It currently supports:
 
-- 🦀 **Rust-style strong typing** (`i32`, `f64`, `str`, etc.)
-- 🐍 **Python-like user interaction** (`print()`, `input()`)
-- 🛠️ **Garbage collection** (no manual memory management)
-- 🏗️ **Pattern matching** (`match` like Rust)
-- 🔄 **Pythonic `try-except` error handling**
-- ⚡ **Async/await support** (Rust-style but simple like Python)
-
----
+- 🔢 **Variable declarations and assignments**
+- 🔄 **For loops with range expressions**
+- 🖨️ **Basic output via `print()`**
+- ➗ **Mathematical expressions and operations**
+- 📦 **Variable scoping within loops**
 
 ## 📝 Example Code
 
-### 1️⃣ Hello, World
+### 1️⃣ Variables & Expressions
 
 ```kdn
-print("Hello, world!");
+let num = 0;
+num = num + 5;
+print(num);
 ```
 
-### 2️⃣ Variables & User Input
+### 2️⃣ For Loops
 
 ```kdn
-let name: str = input("Enter your name: ");
-print("Hello, " + name + "!");
-
-let age: i32 = input("Enter your age: ").parse();
-print("You are " + str(age) + " years old.");
-```
-
-### 3️⃣ Functions & Control Flow
-
-```kdn
-fn greet(name: str) -> str {
-    return "Hello, " + name + "!";
-}
-
-print(greet(input("What's your name? ")));
-```
-
-### 4️⃣ Pattern Matching
-
-```kdn
-let age: i32 = input("Enter your age: ").parse();
-
-match age {
-    1..=12 => print("You're a kid."),
-    13..=19 => print("You're a teen."),
-    _ => print("You're an adult."),
+let sum = 0;
+for i in 0..10 {
+    sum = sum + i;
+    print(sum);
 }
 ```
 
-### 5️⃣ Error Handling (Pythonic `try-except`)
+### 3️⃣ Basic Arithmetic
 
 ```kdn
-try {
-    let age: i32 = input("Enter age: ").parse();
-    print("Your age is " + str(age));
-} except {
-    print("Invalid input! Please enter a number.");
-}
-```
-
-### 6️⃣ For loops (Rust-style)
-
-```kdn
-for i in 0..11 {
-   print(i);
-}
-```
-
-### 7️⃣ Async/Await (Rust-Style)
-
-```kdn
-async fn fetch_data() -> String {
-    return "Data loaded".to_string();
-}
-
-let result: String = await fetch_data();
+let x = 10;
+let y = 5;
+let result = x * y / 2 + 3;
 print(result);
 ```
 
----
+## 🔧 Implementation Details
 
-## 🔧 How It Works
+### Project Architecture
 
-### ✅ Compilation & Execution Steps
+The KdnLang interpreter is implemented in Rust with a modular architecture:
 
-1. Lexer: Converts source code into tokens.
-2. Parser: Builds an Abstract Syntax Tree (AST).
-3. Type Checker: Ensures Rust-like static typing.
-4. Interpreter: Executes the AST.
+```files
+KdnLang/
+├── src/
+│   ├── lexer.rs            # Token definitions using Logos
+│   ├── error.rs            # Error handling with Miette
+│   ├── grammar.pest        # Grammar definitions
+│   ├── interpreter/        # Main language execution
+│   │   ├── mod.rs          # Module exports
+│   │   ├── execution.rs    # Primary interpretation logic
+│   │   ├── context.rs      # Variable context handling
+│   ├── parser/             # Expression parsing
+│   │   ├── mod.rs          # Module exports  
+│   │   ├── expression.rs   # Expression evaluation
+│   ├── main.rs             # Program entry point
+```
 
----
+### How It Works
+
+1. **Lexical Analysis**: Converts source code into tokens using the Logos crate
+2. **Parsing**: Processes tokens into expressions and statements
+3. **Execution**: Interprets the code with variable management and context handling
+4. **Error Reporting**: Provides detailed, colorful error messages using Miette
 
 ## 🏗️ Installation & Usage
 
-### Installation
+### Prerequisites
+
+- Rust and Cargo (1.65 or later recommended)
+
+### Building the Project
 
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/KdntNinja/KdnLang
+   git clone https://github.com/yourusername/KdnLang
    cd KdnLang
    ```
 
@@ -113,78 +89,44 @@ print(result);
    cargo build --release
    ```
 
-3. Add the binary to your PATH (optional):
-
-   ```sh
-   export PATH="$PATH:$(pwd)/target/release"
-   ```
-
 ### Usage
 
 Run a KdnLang script:
 
 ```sh
-kdnlang --file script.kdn
+cargo run -- --file your_script.kdn
 ```
 
----
+Or if you've built the release version:
 
-## 📌 Roadmap
-
-### Project Structure
-
-```plaintext
-KdnLang/
-├── src/
-│   ├── lexer/         # Tokenizer
-│   │   ├── mod.rs
-│   │   ├── lexer.rs
-│   ├── parser/        # AST generator
-│   │   ├── mod.rs
-│   │   ├── parser.rs
-│   ├── typechecker/   # Static type checking
-│   │   ├── mod.rs
-│   │   ├── typechecker.rs
-│   ├── interpreter/  # Executes AST
-│   │   ├── mod.rs
-│   │   ├── interpreter.rs
-│   ├── main.rs         # Entry point
-├── examples/           # Sample KdnLang scripts
-├── tests/              # Unit tests
-├── Cargo.toml          # Rust package configuration
+```sh
+./target/release/kdnlang --file your_script.kdn
 ```
 
-### Development Milestones - TODO
+## 📌 Current Status & Roadmap
 
-#### Phase 1: Core Language Features
+### Currently Implemented
 
-- [x] Design Syntax & Grammar
-- [x] Implement Lexer (Tokenization)
-- [x] Implement Parser (AST)
-- [ ] Implement Type Checker
-- [ ] Implement Interpreter
-- [ ] Develop Standard Library
+- [x] Basic lexer and parser
+- [x] Variable declarations and assignments
+- [x] Mathematical expressions
+- [x] For loops with ranges
+- [x] Basic print statement
+- [x] Error reporting with source highlights
 
-#### Phase 2: Performance & Tooling
+### Upcoming Features
 
-- [ ] REPL for Interactive Coding
-- [ ] Debugging & Error Messages
-- [ ] IDE & LSP Support
-
-#### Phase 3: Advanced Features
-
-- [ ] Concurrency (Threads & Async)
-- [ ] Foreign Function Interface (FFI)
-- [ ] Package Manager
-
----
+- [ ] Functions and return values
+- [ ] Conditional statements (if/else)
+- [ ] User input handling
+- [ ] String manipulation
+- [ ] Type annotations
+- [ ] Extended standard library
 
 ## 🤝 Contributing
 
-Want to help? Open an issue or submit a pull request!
-
----
+Contributions are welcome! Feel free to open issues or submit pull requests.
 
 ## 📜 License
 
-MIT License © 2025 Kaiden Smith
+MIT License © 2023 Kaiden Smith

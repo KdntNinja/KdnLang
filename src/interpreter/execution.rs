@@ -1,210 +1,148 @@
 use std::collections::HashMap;
-use logos::Logos;
 use miette::{NamedSource, Report};
 
 use crate::error::{KdnLangError, Result};
-use crate::lexer::Token;
-use crate::parser::evaluate_expression_with_vars;
-use crate::interpreter::interpret_with_context;
+use crate::parser::{parse_program, AstNode};
 
 /// Main interpret function that processes KdnLang code
 pub fn interpret(input: &str) -> Result<()> {
-    let mut lexer = Token::lexer(input);
+    // Parse the input program using Pest parser
+    let ast: AstNode = parse_program(input)?;
+    
+    // Create a variable context for program execution
     let mut variables: HashMap<String, f64> = HashMap::new();
+    
+    // Evaluate the program AST
+    evaluate_program(&ast, &mut variables)?;
+    
+    Ok(())
+}
 
-    while let Some(result) = lexer.next() {
-        match result {
-            Ok(Token::Let) => {
-                if let Some(Ok(Token::Identifier)) = lexer.next() {
-                    let var_name = lexer.slice().to_string();
-                    if let Some(Ok(Token::Equals)) = lexer.next() {
-                        let mut expr = String::new();
-                        while let Some(inner_result) = lexer.next() {
-                            match inner_result {
-                                Ok(Token::Semicolon) => break,
-                                Ok(_) => expr.push_str(lexer.slice()),
-                                Err(_) => {
-                                    return Err(Report::new(KdnLangError {
-                                        src: NamedSource::new("input", input.to_string()),
-                                        span: (lexer.span().start, lexer.span().end).into(),
-                                        help: Some(
-                                            "Unexpected token while parsing expression".to_string(),
-                                        ),
-                                    }));
-                                }
-                            }
-                        }
-                        let value = evaluate_expression_with_vars(&expr, &variables)?;
-                        variables.insert(var_name, value);
-                    } else {
-                        return Err(Report::new(KdnLangError {
-                            src: NamedSource::new("input", input.to_string()),
-                            span: (lexer.span().start, lexer.span().end).into(),
-                            help: Some("Expected '=' after variable name".to_string()),
-                        }));
-                    }
-                }
+/// Evaluate a parsed AST program
+fn evaluate_program(node: &AstNode, variables: &mut HashMap<String, f64>) -> Result<Option<f64>> {
+    match node {
+        AstNode::Program(statements) => {
+            for statement in statements {
+                evaluate_statement(statement, variables)?;
             }
-            Ok(Token::Identifier) => {
-                let var_name = lexer.slice().to_string();
-                if let Some(Ok(Token::Equals)) = lexer.next() {
-                    let mut expr = String::new();
-                    while let Some(inner_result) = lexer.next() {
-                        match inner_result {
-                            Ok(Token::Semicolon) => break,
-                            Ok(_) => expr.push_str(lexer.slice()),
-                            Err(_) => {
-                                return Err(Report::new(KdnLangError {
-                                    src: NamedSource::new("input", input.to_string()),
-                                    span: (lexer.span().start, lexer.span().end).into(),
-                                    help: Some(
-                                        "Unexpected token while parsing expression".to_string(),
-                                    ),
-                                }));
-                            }
-                        }
-                    }
-                    let value = evaluate_expression_with_vars(&expr, &variables)?;
-                    
-                    // Check if variable exists before assignment
-                    if !variables.contains_key(&var_name) {
-                        return Err(Report::new(KdnLangError {
-                            src: NamedSource::new("input", input.to_string()),
-                            span: (lexer.span().start, lexer.span().end).into(),
-                            help: Some(format!("Variable '{}' not declared", var_name)),
-                        }));
-                    }
-                    
-                    variables.insert(var_name, value);
-                } else {
-                    return Err(Report::new(KdnLangError {
-                        src: NamedSource::new("input", input.to_string()),
-                        span: (lexer.span().start, lexer.span().end).into(),
-                        help: Some("Expected '=' after variable name".to_string()),
-                    }));
-                }
-            }
-            Ok(Token::Print) => {
-                if let Some(Ok(Token::LParen)) = lexer.next() {
-                    let mut expr = String::new();
-                    while let Some(inner_result) = lexer.next() {
-                        match inner_result {
-                            Ok(Token::RParen) => break,
-                            Ok(_) => expr.push_str(lexer.slice()),
-                            Err(_) => {
-                                return Err(Report::new(KdnLangError {
-                                    src: NamedSource::new("input", input.to_string()),
-                                    span: (lexer.span().start, lexer.span().end).into(),
-                                    help: Some(
-                                        "Unexpected token while parsing expression".to_string(),
-                                    ),
-                                }));
-                            }
-                        }
-                    }
-                    let value = evaluate_expression_with_vars(&expr, &variables)?;
-                    println!("{}", value);
-                } else {
-                    return Err(Report::new(KdnLangError {
-                        src: NamedSource::new("input", input.to_string()),
-                        span: (lexer.span().start, lexer.span().end).into(),
-                        help: Some("Expected '(' after 'print'".to_string()),
-                    }));
-                }
-            }
-            Ok(Token::For) => {
-                if let Some(Ok(Token::Identifier)) = lexer.next() {
-                    let loop_var = lexer.slice().to_string();
-                    if let Some(Ok(Token::In)) = lexer.next() {
-                        let mut range_start = String::new();
-                        while let Some(inner_result) = lexer.next() {
-                            match inner_result {
-                                Ok(Token::Range) => break,
-                                Ok(_) => range_start.push_str(lexer.slice()),
-                                Err(_) => {
-                                    return Err(Report::new(KdnLangError {
-                                        src: NamedSource::new("input", input.to_string()),
-                                        span: (lexer.span().start, lexer.span().end).into(),
-                                        help: Some("Unexpected token while parsing range start".to_string()),
-                                    }));
-                                }
-                            }
-                        }
+            Ok(None)
+        },
+        _ => Err(Report::new(KdnLangError {
+            src: NamedSource::new("input", "input".to_string()),
+            span: (0, 1).into(),
+            help: Some("Expected a program".to_string()),
+        })),
+    }
+}
 
-                        let mut range_end = String::new();
-                        while let Some(inner_result) = lexer.next() {
-                            match inner_result {
-                                Ok(Token::LBrace) => break,
-                                Ok(_) => range_end.push_str(lexer.slice()),
-                                Err(_) => {
-                                    return Err(Report::new(KdnLangError {
-                                        src: NamedSource::new("input", input.to_string()),
-                                        span: (lexer.span().start, lexer.span().end).into(),
-                                        help: Some("Unexpected token while parsing range end".to_string()),
-                                    }));
-                                }
-                            }
-                        }
-
-                        let start = evaluate_expression_with_vars(&range_start, &variables)? as i64;
-                        let end = evaluate_expression_with_vars(&range_end, &variables)? as i64;
-                        
-                        // Read the entire block content
-                        let mut block_content = String::new();
-                        let mut brace_level = 1;
-                        
-                        while let Some(inner_result) = lexer.next() {
-                            match inner_result {
-                                Ok(Token::LBrace) => {
-                                    brace_level += 1;
-                                    block_content.push_str(lexer.slice());
-                                },
-                                Ok(Token::RBrace) => {
-                                    brace_level -= 1;
-                                    if brace_level == 0 {
-                                        break;
-                                    }
-                                    block_content.push_str(lexer.slice());
-                                },
-                                Ok(_) => block_content.push_str(lexer.slice()),
-                                Err(_) => {
-                                    return Err(Report::new(KdnLangError {
-                                        src: NamedSource::new("input", input.to_string()),
-                                        span: (lexer.span().start, lexer.span().end).into(),
-                                        help: Some("Unexpected token in loop body".to_string()),
-                                    }));
-                                }
-                            }
-                        }
-                        
-                        // Execute the loop
-                        for i in start..end {
-                            // Update the loop variable for each iteration
-                            let mut loop_variables = variables.clone();
-                            loop_variables.insert(loop_var.clone(), i as f64);
-                            
-                            // Execute the block with the current context
-                            interpret_with_context(&block_content, &mut loop_variables)?;
-                            
-                            // Update any variables that might have changed in the loop
-                            for (key, value) in loop_variables.iter() {
-                                if key != &loop_var {
-                                    variables.insert(key.clone(), *value);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Ok(_) => {},
-            Err(_) => {
+/// Evaluate a statement in the AST
+fn evaluate_statement(node: &AstNode, variables: &mut HashMap<String, f64>) -> Result<Option<f64>> {
+    match node {
+        AstNode::LetStatement { name, value, .. } => {
+            let value_result = evaluate_expression(value, variables)?;
+            variables.insert(name.clone(), value_result);
+            Ok(None)
+        },
+        AstNode::Assignment { name, value } => {
+            let value_result = evaluate_expression(value, variables)?;
+            
+            // Check if variable exists before assignment
+            if !variables.contains_key(name) {
                 return Err(Report::new(KdnLangError {
-                    src: NamedSource::new("input", input.to_string()),
-                    span: (lexer.span().start, lexer.span().end).into(),
-                    help: Some("Unexpected token".to_string()),
+                    src: NamedSource::new("input", "input".to_string()),
+                    span: (0, name.len()).into(),
+                    help: Some(format!("Variable '{}' not declared", name)),
                 }));
             }
-        }
+            
+            variables.insert(name.clone(), value_result);
+            Ok(None)
+        },
+        AstNode::PrintStatement { expression } => {
+            let value = evaluate_expression(expression, variables)?;
+            println!("{}", value);
+            Ok(None)
+        },
+        AstNode::ForLoop { variable, range_start, range_end, body } => {
+            let start_value = evaluate_expression(range_start, variables)? as i64;
+            let end_value = evaluate_expression(range_end, variables)? as i64;
+            
+            for i in start_value..end_value {
+                // Create a new scope for loop variables
+                let mut loop_variables = variables.clone();
+                loop_variables.insert(variable.clone(), i as f64);
+                
+                // Execute the loop body
+                for statement in body {
+                    evaluate_statement(statement, &mut loop_variables)?;
+                }
+                
+                // Copy modified variables back to parent scope (except loop variable)
+                for (key, value) in loop_variables.iter() {
+                    if key != variable {
+                        variables.insert(key.clone(), *value);
+                    }
+                }
+            }
+            
+            Ok(None)
+        },
+        _ => Err(Report::new(KdnLangError {
+            src: NamedSource::new("input", "input".to_string()),
+            span: (0, 1).into(),
+            help: Some("Invalid statement type".to_string()),
+        })),
     }
-    Ok(())
+}
+
+/// Evaluate an expression in the AST
+fn evaluate_expression(node: &AstNode, variables: &HashMap<String, f64>) -> Result<f64> {
+    match node {
+        AstNode::BinaryOp { op, left, right } => {
+            let left_value = evaluate_expression(left, variables)?;
+            let right_value = evaluate_expression(right, variables)?;
+            
+            let result = match op.as_str() {
+                "+" => left_value + right_value,
+                "-" => left_value - right_value,
+                "*" => left_value * right_value,
+                "/" => {
+                    if right_value == 0.0 {
+                        return Err(Report::new(KdnLangError {
+                            src: NamedSource::new("input", "input".to_string()),
+                            span: (0, 1).into(),
+                            help: Some("Division by zero".to_string()),
+                        }));
+                    }
+                    left_value / right_value
+                },
+                _ => {
+                    return Err(Report::new(KdnLangError {
+                        src: NamedSource::new("input", "input".to_string()),
+                        span: (0, op.len()).into(),
+                        help: Some(format!("Unknown operator: {}", op)),
+                    }));
+                },
+            };
+            
+            Ok(result)
+        },
+        AstNode::Number(value) => Ok(*value),
+        AstNode::Identifier(name) => {
+            if let Some(value) = variables.get(name) {
+                Ok(*value)
+            } else {
+                Err(Report::new(KdnLangError {
+                    src: NamedSource::new("input", "input".to_string()),
+                    span: (0, name.len()).into(),
+                    help: Some(format!("Undefined variable: {}", name)),
+                }))
+            }
+        },
+        _ => Err(Report::new(KdnLangError {
+            src: NamedSource::new("input", "input".to_string()),
+            span: (0, 1).into(),
+            help: Some("Invalid expression".to_string()),
+        })),
+    }
 }
