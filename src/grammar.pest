@@ -1,0 +1,41 @@
+// A program is a series of directives.
+program = { SOI ~ directive* ~ EOI }
+
+// A directive can either be a variable declaration/assignment, a print statement, or a for loop.
+directive = { let_statement | print_statement | for_loop }
+
+// A `let` statement for variable declaration or assignment.
+let_statement = { "let" ~ identifier ~ (":" ~ type_annotation)? ~ "=" ~ expr ~ ";" }
+
+// Type annotations for variables.
+type_annotation = { "int" | "float" | "string" }
+
+// A `print` statement for outputting values.
+print_statement = { "print" ~ "(" ~ expr ~ ")" ~ ";" }
+
+// A for loop consists of the `for` keyword, an identifier, a range, and a block.
+for_loop = { "for" ~ identifier ~ "in" ~ range ~ block }
+
+// A range is defined using the `..` operator.
+range = { expr ~ ".." ~ expr }
+
+// A block is a series of directives enclosed in curly braces.
+block = { "{" ~ directive* ~ "}" }
+
+// An expression consists of terms combined with addition or subtraction.
+expr = { term ~ ("+" ~ term | "-" ~ term)* }
+
+// A term consists of factors combined with multiplication or division.
+term = { factor ~ ("*" ~ factor | "/" ~ factor)* }
+
+// Identifiers are alphanumeric strings starting with a letter.
+identifier = @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
+
+// A factor can be a number, an identifier, or a parenthesized expression.
+factor = { number | identifier | "(" ~ expr ~ ")" }
+
+// Numbers can be integers or floating-point values.
+number = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+
+// Whitespace characters (spaces, tabs, newlines, etc.) are ignored.
+WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
