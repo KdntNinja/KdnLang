@@ -33,7 +33,7 @@ const (
 
 	DOT
 	DOT_DOT
-	SEMICOLON
+	SEMI_COLON
 	COLON
 	QUESTION
 	COMMA
@@ -66,6 +66,24 @@ const (
 	TYPEOF
 	IN
 )
+
+var reserved_lu = map[string]TokenKind{
+	"let":     LET,
+	"const":   CONST,
+	"class":   CLASS,
+	"new":     NEW,
+	"import":  IMPORT,
+	"from":    FROM,
+	"fn":      FN,
+	"if":      IF,
+	"else":    ELSE,
+	"foreach": FOREACH,
+	"while":   WHILE,
+	"for":     FOR,
+	"export":  EXPORT,
+	"typeof":  TYPEOF,
+	"in":      IN,
+}
 
 type Token struct {
 	Kind  TokenKind
@@ -142,7 +160,7 @@ func TokenKindString(kind TokenKind) string {
 		return "dot"
 	case DOT_DOT:
 		return "dot_dot"
-	case SEMICOLON:
+	case SEMI_COLON:
 		return "semicolon"
 	case COLON:
 		return "colon"
